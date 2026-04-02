@@ -30,4 +30,8 @@ typedef struct CardNode {
     struct CardNode *next;
 } CardNode;
 
+char rank_to_char(Rank rank);
+char suit_to_char(Suit suit);
+bool card_from_string(const char *s, Card *out);
+
 #endif
