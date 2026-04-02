@@ -11,7 +11,6 @@ typedef enum {
 } Rank;
 
 /* Card suits */
-
 typedef enum {
     SUIT_CLUBS = 0,
     SUIT_SPADE,
