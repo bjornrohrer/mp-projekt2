@@ -19,6 +19,15 @@ typedef enum {
     SUIT_HEART
 } Suit;
 
+typedef struct {
+    Rank rank;
+    Suit suit;
+    bool face_up;
+} Card;
 
+typedef struct CardNode {
+    Card card;
+    struct CardNode *next;
+} CardNode;
 
 #endif
