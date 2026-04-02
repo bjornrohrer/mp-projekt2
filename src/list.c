@@ -1,3 +1,6 @@
+#include "card.h"
+#include <stdlib.h>
+
 /* Create node */
 
 /* Push node to head */
