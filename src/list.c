@@ -13,6 +13,10 @@ CardNode *node_create(Card card) {
 }
 
 /* Push node to head */
+void push_head(CardNode **head, CardNode *node) {
+    node->next = *head;
+    *head = node;
+}
 
 /* Push node to tail */
 
