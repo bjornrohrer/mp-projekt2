@@ -3,7 +3,7 @@
 
 /* Create node */
 CardNode *node_create(Card card) {
-    CardNode *node = malloc(sizeof(Card card))
+    CardNode *node = malloc(sizeof(Card card));
     if (node == NULL) {
         return NULL;
     }
