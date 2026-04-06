@@ -19,7 +19,12 @@ void push_head(CardNode **head, CardNode *node) {
 }
 
 /* Push node to tail */
-
+void push_tail(CardNode **head, CardNode *node) {
+    node->next = NULL;
+    if (*head == NULL) {
+        *head = node;
+    }
+}
 /* Pop node from head */
 
 /* Pop node from tail */
