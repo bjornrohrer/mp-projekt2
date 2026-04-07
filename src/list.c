@@ -26,7 +26,11 @@ void append(CardNode **head, CardNode *node) {
     }
 }
 /* Pop node from head */
-
+int pop_head(CardNode *head) {
+    if (*head == NULL) {
+        printf("The list is empty\n");
+    }
+}
 /* Pop node from tail */
 
 /* Look at head without removing it */
