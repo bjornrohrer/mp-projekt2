@@ -30,6 +30,14 @@ int pop_head(CardNode *head) {
     if (*head == NULL) {
         printf("The list is empty\n");
     }
+
+    CardNode *temp = *head;
+    int data = temp->head;
+
+    *head = (*head)->next;
+    free(temp);
+
+    return data;
 }
 /* Pop node from tail */
 
