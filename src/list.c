@@ -48,8 +48,18 @@ int pop_head(CardNode **head) {
 
     return data;
 }
-/* Pop node from tail */
 
+/* Pop node from tail */
+int pop_tail(CardNode **head) {
+    if (*head == NULL) {
+        printf("The list is empty\n");
+        return -1;
+    }
+    /* Runs through list and checks if the next node is null*/
+    while ((*head)->next != NULL) {
+        *head = (*head)->next;
+    }
+}
 /* Look at head without removing it */
 
 /* Look at tail without removing it */
