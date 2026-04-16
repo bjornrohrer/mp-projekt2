@@ -34,4 +34,3 @@ char suit_to_char(Suit suit);
 bool card_from_string(const char *s, Card *out);
 
 #endif
-fuck nicolas
