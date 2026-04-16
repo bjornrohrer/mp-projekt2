@@ -31,7 +31,7 @@ typedef struct CardNode {
 
 typedef struct Gamestate {
     CardNode *columns[7];
-    CardNode *rows[4];
+    CardNode *foundations[4];
 };
 
 char rank_to_char(Rank rank);
