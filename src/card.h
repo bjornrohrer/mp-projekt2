@@ -29,6 +29,11 @@ typedef struct CardNode {
     struct CardNode *next;
 } CardNode;
 
+typedef struct Gamestate {
+    CardNode *columns[7];
+    CardNode *rows[4];
+};
+
 char rank_to_char(Rank rank);
 char suit_to_char(Suit suit);
 bool card_from_string(const char *s, Card *out);
