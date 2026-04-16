@@ -26,6 +26,7 @@ void append(CardNode **head, CardNode *node) {
         *head = node;
     }
 }
+
 /* Pop node from head */
 int pop_head(CardNode *head) {
     if (*head == NULL) {
