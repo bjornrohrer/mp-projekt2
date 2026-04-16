@@ -24,17 +24,24 @@ void append(CardNode **head, CardNode *node) {
     node->next = NULL;
     if (*head == NULL) {
         *head = node;
+    } else {
+        CardNode *current = *head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = node;
     }
 }
 
 /* Pop node from head */
-int pop_head(CardNode *head) {
+int pop_head(CardNode **head) {
     if (*head == NULL) {
         printf("The list is empty\n");
+        return -1;
     }
 
     CardNode *temp = *head;
-    int data = temp->head;
+    int data = temp->card.rank;
 
     *head = (*head)->next;
     free(temp);
