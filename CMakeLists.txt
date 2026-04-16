@@ -6,4 +6,5 @@ set(CMAKE_C_STANDARD 11)
 add_executable(mp_projekt2
         main.c
         src/card.h
-        src/list.c)
+        src/list.c
+        src/deck.c)
