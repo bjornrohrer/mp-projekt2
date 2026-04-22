@@ -36,7 +36,6 @@ void append(CardNode **head, CardNode *node) {
 /* Pop node from head */
 Card pop_head(CardNode **head) {
     if (*head == NULL) {
-        printf("The list is empty\n");
         Card empty = {0};
         return empty;
     }
@@ -53,7 +52,6 @@ Card pop_head(CardNode **head) {
 /* Pop node from tail */
 Card pop_tail(CardNode **head) {
     if (*head == NULL) {
-        printf("The list is empty\n");
         Card empty = {0};
         return empty;
     }
@@ -80,7 +78,6 @@ Card pop_tail(CardNode **head) {
 /* Look at head without removing it */
 Card peek_head(CardNode *head) {
     if (head == NULL) {
-        printf("The list is empty\n");
         Card empty = {0};
         return empty;
     }
@@ -90,7 +87,6 @@ Card peek_head(CardNode *head) {
 /* Look at tail without removing it */
 Card peek_tail(CardNode *head) {
     if (head == NULL) {
-        printf("The list is empty\n");
         Card empty = {0};
         return empty;
     }
@@ -109,7 +105,6 @@ Card peek_tail(CardNode *head) {
 /* Get number of nodes in list */
 int list_length(CardNode *head) {
     if (head == NULL) {
-        printf("The list is empty\n");
         return 0;
     }
 
