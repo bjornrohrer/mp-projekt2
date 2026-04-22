@@ -88,7 +88,24 @@ Card peek_head(CardNode *head) {
     return head->card;
 }
 /* Look at tail without removing it */
+Card peek_tail(CardNode *head) {
+    if (head == NULL) {
+        printf("The list is empty\n");
+        Card empty = {0};
+        return empty;
+    }
 
+    if (head->next == NULL) {
+        return head->card;
+    }
+
+    CardNode *current = head;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+
+    return current->card;
+}
 /* Get number of nodes in list */
 
 /* Get node at specific index */
