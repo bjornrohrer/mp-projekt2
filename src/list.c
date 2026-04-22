@@ -78,7 +78,15 @@ Card pop_tail(CardNode **head) {
     return value;
 }
 /* Look at head without removing it */
+Card peek_head(CardNode *head) {
+    if (head == NULL) {
+        printf("The list is empty\n");
+        Card empty = {0};
+        return empty;
+    }
 
+    return head->card;
+}
 /* Look at tail without removing it */
 
 /* Get number of nodes in list */
