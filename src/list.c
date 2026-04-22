@@ -51,10 +51,11 @@ Card pop_head(CardNode **head) {
 }
 
 /* Pop node from tail */
-int pop_tail(CardNode **head) {
+Card pop_tail(CardNode **head) {
     if (*head == NULL) {
         printf("The list is empty\n");
-        return -1;
+        Card empty = {0};
+        return empty;
     }
 
     if ((*head)-> next == NULL) {
