@@ -55,6 +55,14 @@ int pop_tail(CardNode **head) {
         printf("The list is empty\n");
         return -1;
     }
+
+    if ((*head)-> next == NULL) {
+    CardNode value = (*head)->card;
+    free(*head);
+    *head = NULL;
+    return value;
+    }
+
     /* Runs through list and checks if the next node is null*/
     while ((*head)->next != NULL) {
         *head = (*head)->next;
