@@ -58,11 +58,11 @@ Card pop_tail(CardNode **head) {
         return empty;
     }
 
-    if ((*head)-> next == NULL) {
-    Card value = (*head)->card;
-    free(*head);
-    *head = NULL;
-    return value;
+    if ((*head)->next == NULL) {
+        Card value = (*head)->card;
+        free(*head);
+        *head = NULL;
+        return value;
     }
 
     /* Runs through list and checks if the next node is null*/
