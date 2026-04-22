@@ -107,7 +107,25 @@ Card peek_tail(CardNode *head) {
     return current->card;
 }
 /* Get number of nodes in list */
+int list_length(CardNode *head) {
+    if (head == NULL) {
+        printf("The list is empty\n");
+        return 0;
+    }
 
+    if (head->next == NULL) {
+        return 1;
+    }
+
+    int count = 0;
+    CardNode *current = head;
+    while (current != NULL) {
+        count += 1;
+        current = current->next;
+    }
+
+    return count;
+}
 /* Get node at specific index */
 
 /* Find node by number and suit of card */
