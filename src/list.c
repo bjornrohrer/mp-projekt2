@@ -65,11 +65,17 @@ Card pop_tail(CardNode **head) {
         return value;
     }
 
-    /* Runs through list and checks if the next node is null*/
+    /* Traverse to the second-to-last node */
     CardNode *current = *head;
-    while (*current->next->next != NULL) {
-        *head = current->next;
+    while (current->next->next != NULL) {
+        current = current->next;
     }
+
+    CardNode *tail = current->next;
+    Card value = tail->card;
+    current->next = NULL;
+    free(tail);
+    return value;
 }
 /* Look at head without removing it */
 
