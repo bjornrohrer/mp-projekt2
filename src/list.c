@@ -142,7 +142,18 @@ Card specific_node(CardNode *head, int index) {
     return current->card;
 }
 /* Find node by number and suit of card */
+Card find_node(CardNode *head, Rank rank, Suit suit) {
+    CardNode *current = head;
+    while (current != NULL) {
+        if (current->card.rank == rank && current->card.suit == suit) {
+            return current->card;
+        }
+        current = current->next;
+    }
 
+    Card empty = {0};
+    return empty;
+}
 /* Split list by specific node returning the tail */
 
 /* Append an entire sublist to the tail of a list */
