@@ -122,7 +122,25 @@ int list_length(CardNode *head) {
     return count;
 }
 /* Get node at specific index */
+Card specific_node(CardNode *head, int index) {
+    if (index < 0) {
+        Card empty = {0};
+        return empty;
+    }
 
+    CardNode *current = head;
+    while (index > 0 && current != NULL) {
+        index -= 1;
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        Card empty = {0};
+        return empty;
+    }
+
+    return current->card;
+}
 /* Find node by number and suit of card */
 
 /* Split list by specific node returning the tail */
