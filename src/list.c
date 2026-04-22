@@ -34,19 +34,20 @@ void append(CardNode **head, CardNode *node) {
 }
 
 /* Pop node from head */
-int pop_head(CardNode **head) {
+Card pop_head(CardNode **head) {
     if (*head == NULL) {
         printf("The list is empty\n");
-        return -1;
+        Card empty = {0};
+        return empty;
     }
 
     CardNode *temp = *head;
-    int data = temp->card.rank;
+    Card value = temp->card;
 
     *head = (*head)->next;
     free(temp);
 
-    return data;
+    return value;
 }
 
 /* Pop node from tail */
@@ -57,7 +58,7 @@ int pop_tail(CardNode **head) {
     }
 
     if ((*head)-> next == NULL) {
-    CardNode value = (*head)->card;
+    Card value = (*head)->card;
     free(*head);
     *head = NULL;
     return value;
