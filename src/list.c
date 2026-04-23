@@ -187,6 +187,22 @@ CardNode *split_list(CardNode **head, Rank rank, Suit suit) {
 }
 
 /* Append an entire sublist to the tail of a list */
+void append_sublist(CardNode **head, CardNode *sublist) {
+    if (sublist == NULL) {
+        return;
+    }
+
+    if (*head == NULL) {
+        *head = sublist;
+        return;
+    }
+
+    CardNode *current = *head;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+    current->next = sublist;
+}
 
 /* Free all nodes in a list */
 
