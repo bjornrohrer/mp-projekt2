@@ -7,4 +7,5 @@ add_executable(mp_projekt2
         main.c
         src/card.h
         src/list.c
-        src/deck.c)
+        src/deck.c
+        src/list.h)

@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "card.h"
-
 #include "src/card.h"
 
 int load_deck(const char *filename, CardNode **deck);
