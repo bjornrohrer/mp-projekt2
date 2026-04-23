@@ -161,6 +161,30 @@ Card find_node(CardNode *head, Rank rank, Suit suit) {
 }
 
 /* Split list by specific node returning the tail */
+CardNode *split_list(CardNode **head, Rank rank, Suit suit) {
+    if (*head == NULL) {
+        return NULL;
+    }
+
+    if ((*head)->card.rank == rank && (*head)->card.suit == suit) {
+        CardNode *tail = *head;
+        *head = NULL;
+        return tail;
+    }
+
+    CardNode *previous = *head;
+    CardNode *current = previous->next;
+    while (current != NULL) {
+        if (current->card.rank == rank && current->card.suit == suit) {
+            previous->next = NULL;
+            return current;
+        }
+        previous = current;
+        current = current->next;
+    }
+
+    return NULL;
+}
 
 /* Append an entire sublist to the tail of a list */
 
