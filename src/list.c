@@ -205,4 +205,13 @@ void append_sublist(CardNode **head, CardNode *sublist) {
 }
 
 /* Free all nodes in a list */
+void free_list(CardNode **head) {
+    CardNode *current = *head;
+    while (current != NULL) {
+        CardNode *next = current->next;
+        free(current);
+        current = next;
+    }
+    *head = NULL;
+}
 
