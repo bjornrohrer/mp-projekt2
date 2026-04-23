@@ -75,6 +75,7 @@ Card pop_tail(CardNode **head) {
     free(tail);
     return value;
 }
+
 /* Look at head without removing it */
 Card peek_head(CardNode *head) {
     if (head == NULL) {
@@ -84,6 +85,7 @@ Card peek_head(CardNode *head) {
 
     return head->card;
 }
+
 /* Look at tail without removing it */
 Card peek_tail(CardNode *head) {
     if (head == NULL) {
@@ -102,6 +104,7 @@ Card peek_tail(CardNode *head) {
 
     return current->card;
 }
+
 /* Get number of nodes in list */
 int list_length(CardNode *head) {
     if (head == NULL) {
@@ -121,6 +124,7 @@ int list_length(CardNode *head) {
 
     return count;
 }
+
 /* Get node at specific index */
 Card specific_node(CardNode *head, int index) {
     if (index < 0) {
@@ -141,6 +145,7 @@ Card specific_node(CardNode *head, int index) {
 
     return current->card;
 }
+
 /* Find node by number and suit of card */
 Card find_node(CardNode *head, Rank rank, Suit suit) {
     CardNode *current = head;
@@ -154,6 +159,7 @@ Card find_node(CardNode *head, Rank rank, Suit suit) {
     Card empty = {0};
     return empty;
 }
+
 /* Split list by specific node returning the tail */
 
 /* Append an entire sublist to the tail of a list */
