@@ -162,7 +162,7 @@ Card find_node(CardNode *head, Rank rank, Suit suit) {
 
 /* Split list by specific node returning the tail */
 CardNode *split_list(CardNode **head, Rank rank, Suit suit) {
-    if (*head == NULL) {
+    if (head == NULL || *head == NULL) {
         return NULL;
     }
 
@@ -174,6 +174,7 @@ CardNode *split_list(CardNode **head, Rank rank, Suit suit) {
 
     CardNode *previous = *head;
     CardNode *current = previous->next;
+
     while (current != NULL) {
         if (current->card.rank == rank && current->card.suit == suit) {
             previous->next = NULL;
