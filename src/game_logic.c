@@ -37,6 +37,7 @@ static char suit_char_local(Suit suit);
 static void print_card_local(Card card);
 static void print_tableau(const Gamestate *game);
 static int show_current_deck(void);
+static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
 
@@ -336,8 +337,14 @@ static int show_current_deck(void) {
 }
 
 // Regler for foundations
-static bool can_move_to_foundation(Card card, CardNode *foundations) {
-    
+static bool can_move_to_foundation(Card card, CardNode *foundation) {
+    if (foundation == NULL) {
+        return card.rank == RANK_ACE;
+    }
+
+    Card top = peek_tail(foundation);
+
+    return card.rank == top.rank + 1 && card.suit == top.suit;
 }
 
 
