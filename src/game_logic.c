@@ -335,6 +335,12 @@ static int show_current_deck(void) {
     return index == DECK_SIZE;
 }
 
+// Regler for foundations
+static bool can_move_to_foundation(Card card, CardNode *foundations) {
+    
+}
+
+
 // startup kommandoer
 static int is_startup_command(const char *command) {
     if (strcmp(command, "LD") == 0) return 1;
