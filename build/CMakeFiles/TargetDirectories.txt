@@ -1,0 +1,3 @@
+/Users/bjornarthurrohrer/c/mp-projekt2/build/CMakeFiles/mp_projekt2.dir
+/Users/bjornarthurrohrer/c/mp-projekt2/build/CMakeFiles/edit_cache.dir
+/Users/bjornarthurrohrer/c/mp-projekt2/build/CMakeFiles/rebuild_cache.dir
