@@ -7,4 +7,8 @@ add_executable(mp_projekt2
         main.c
         src/card.h
         src/list.c
-        src/deck.c)
+        src/deck.c
+        src/input.c
+        src/game_logic.c
+        src/main_text.c
+        src/text_ui.c)
