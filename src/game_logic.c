@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "card.h"
+#include "deck.h"
+#include "list.h"
 
 #define ROWS 11
 #define COLS 7
@@ -17,18 +19,14 @@ typedef enum {
 
 // startup
 static Phase current_phase = PHASE_STARTUP;
-// her gemmer vi selve spillets kolonner og foundations
+// spillets kolonner og foundations
 static Gamestate current_game = {0};
-// simpel lokal deck så vi kan få P til at virke (MIDLERTIDIG LØSNING)
-static Card current_deck[DECK_SIZE];
-static int deck_count = 0;
+static CardNode *current_deck = NULL;
 static int deck_loaded = 0;
 static char last_command[40] = "";
 static char message[100] = "";
 
 static int first_col_in_row(int row);
-static void load_default_deck(void);
-static void free_list(CardNode *head);
 static void clear_tableau(Gamestate *game);
 static void clear_foundations(Gamestate *game);
 static CardNode *new_node(Card card);
@@ -37,17 +35,17 @@ static int deal_from_current_deck(Gamestate *game);
 static char rank_char_local(Rank rank);
 static char suit_char_local(Suit suit);
 static void print_card_local(Card card);
-static void print_tableau_debug(const Gamestate *game);
+static void print_tableau(const Gamestate *game);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command);
 
-// main kører en simpel command loop
-int main(void) {
+// kører command loop
+int game_logic_run(void) {
     char command[40];
     int running = 1;
 
     while (running) {
-        print_tableau_debug(&current_game);
+        print_tableau(&current_game);
         printf("\nLAST Command: %s\n", last_command);
         printf("Message: %s\n", message);
         printf("INPUT > ");
@@ -63,10 +61,11 @@ int main(void) {
 
     clear_tableau(&current_game);
     clear_foundations(&current_game);
+    free_list(&current_deck);
     return 0;
 }
 
-// finder hvor rækken starter i Yukon-layoutet
+// finder hvor rækken starter i Yukon layoutet
 static int first_col_in_row(int row) {
     // første række starter helt til venstre
     if (row == 0) {
@@ -88,50 +87,12 @@ static int first_col_in_row(int row) {
     return 4;
 }
 
-// laver en standard deck i rækkefølgen C, D, H, S
-static void load_default_deck(void) {
-    int i;
-    int j;
-    int index = 0;
-    Rank ranks[13] = {
-        RANK_ACE, RANK_TWO, RANK_THREE, RANK_FOUR, RANK_FIVE, RANK_SIX, RANK_SEVEN,
-        RANK_EIGHT, RANK_NINE, RANK_TEN, RANK_JACK, RANK_QUEEN, RANK_KING
-    };
-    Suit suits[4] = {
-        SUIT_CLUBS, SUIT_DIAMOND, SUIT_HEART, SUIT_SPADE
-    };
-
-    // går først gennem suits og så ranks
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 13; j++) {
-            current_deck[index].rank = ranks[j];
-            current_deck[index].suit = suits[i];
-            current_deck[index].face_up = false;
-            index++;
-        }
-    }
-
-    deck_count = index;
-    deck_loaded = 1;
-}
-
-static void free_list(CardNode *head) {
-    CardNode *next;
-
-    while (head != NULL) {
-        next = head->next;
-        free(head);
-        head = next;
-    }
-}
-
 // rydder alle kolonner før vi dealer igen
 static void clear_tableau(Gamestate *game) {
     int i;
 
     for (i = 0; i < COLS; i++) {
-        free_list(game->columns[i]);
-        game->columns[i] = NULL;
+        free_list(&game->columns[i]);
     }
 }
 
@@ -140,8 +101,7 @@ static void clear_foundations(Gamestate *game) {
     int i;
 
     for (i = 0; i < FOUNDATIONS; i++) {
-        free_list(game->foundations[i]);
-        game->foundations[i] = NULL;
+        free_list(&game->foundations[i]);
     }
 }
 
@@ -188,9 +148,14 @@ static int deal_from_current_deck(Gamestate *game) {
     int start_col;
     int index = 0;
     int count_in_col[COLS] = {0};
+    CardNode *current;
     Card card;
 
-    if (deck_count != DECK_SIZE) {
+    if (!deck_loaded || current_deck == NULL) {
+        return 0;
+    }
+
+    if (list_length(current_deck) != DECK_SIZE) {
         return 0;
     }
 
@@ -198,17 +163,19 @@ static int deal_from_current_deck(Gamestate *game) {
     clear_tableau(game);
     clear_foundations(game);
 
+    current = current_deck;
+
     // går gennem hele layoutet række for række
     for (row = 0; row < ROWS; row++) {
         start_col = first_col_in_row(row);
 
         // kun de kolonner der findes i rækken får et kort
         for (col = start_col; col < COLS; col++) {
-            if (index >= deck_count) {
+            if (current == NULL) {
                 return 0;
             }
 
-            card = current_deck[index];
+            card = current->card;
             count_in_col[col]++;
 
             // de første kort i hver kolonne skal være skjulte
@@ -222,6 +189,7 @@ static int deal_from_current_deck(Gamestate *game) {
                 return 0;
             }
 
+            current = current->next;
             index++;
         }
     }
@@ -267,8 +235,8 @@ static void print_card_local(Card card) {
     }
 }
 
-// printer tableauet så vi kan se om P virker
-static void print_tableau_debug(const Gamestate *game) {
+// printer tableauet i terminalen
+static void print_tableau(const Gamestate *game) {
     int row;
     int col;
     CardNode *row_ptrs[COLS];
@@ -288,7 +256,7 @@ static void print_tableau_debug(const Gamestate *game) {
     printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\n\n");
 
     // printer én række ad gangen
-    for (row = 0; row < 11; row++) {
+    for (row = 0; row < ROWS; row++) {
         for (col = 0; col < COLS; col++) {
             if (row < counts[col] && row_ptrs[col] != NULL) {
                 print_card_local(row_ptrs[col]->card);
@@ -310,11 +278,6 @@ static void print_tableau_debug(const Gamestate *game) {
 
         printf("\n");
     }
-
-    printf("\nCards per column:\n");
-    for (col = 0; col < COLS; col++) {
-        printf("C%d: %d\n", col + 1, counts[col]);
-    }
 }
 
 // tjekker om kommandoen hører til startup-fasen
@@ -328,10 +291,26 @@ static int is_startup_command(const char *command) {
     return 0;
 }
 
-// håndterer de kommandoer vi har lavet indtil videre
+// håndterer kommandoerne for den nuværende del
 static int handle_command(const char *command) {
     if (current_phase == PHASE_PLAY && is_startup_command(command)) {
         strcpy(message, "Command not available in the PLAY phase.");
+        return 1;
+    }
+
+    if (strcmp(command, "LD") == 0) {
+        clear_tableau(&current_game);
+        clear_foundations(&current_game);
+        free_list(&current_deck);
+        current_phase = PHASE_STARTUP;
+        if (!generate_unshuffled_deck(&current_deck)) {
+            strcpy(message, "Could not load deck.");
+            deck_loaded = 0;
+            return 1;
+        }
+
+        deck_loaded = 1;
+        strcpy(message, "OK");
         return 1;
     }
 
@@ -373,11 +352,7 @@ static int handle_command(const char *command) {
         return 0;
     }
 
-    if (current_phase == PHASE_PLAY) {
-        strcpy(message, "Move commands are not implemented yet.");
-    } else {
-        strcpy(message, "Command not implemented yet.");
-    }
+    strcpy(message, "Command not available yet.");
 
     return 1;
 }

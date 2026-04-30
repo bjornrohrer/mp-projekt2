@@ -11,4 +11,5 @@ add_executable(mp_projekt2
         src/input.c
         src/game_logic.c
         src/main_text.c
-        src/text_ui.c)
+        src/text_ui.c
+        src/card.c)
