@@ -6,10 +6,10 @@ set(CMAKE_C_STANDARD 11)
 add_executable(mp_projekt2
         main.c
         src/card.h
-        src/card.c
-        src/list.h
         src/list.c
-        src/deck.h
         src/deck.c
-        src/text_ui.h
-        src/text_ui.c)
+        src/input.c
+        src/game_logic.c
+        src/main_text.c
+        src/text_ui.c
+        src/card.c)

@@ -7,7 +7,7 @@ AC
 7C
 8C
 9C
-10C
+TC
 JC
 QC
 KC
@@ -20,7 +20,7 @@ AD
 7D
 8D
 9D
-10D
+TD
 JD
 QD
 KD
@@ -33,7 +33,7 @@ AH
 7H
 8H
 9H
-10H
+TH
 JH
 QH
 KH
@@ -46,7 +46,7 @@ AS
 7S
 8S
 9S
-10S
+TS
 JS
 QS
 KS
