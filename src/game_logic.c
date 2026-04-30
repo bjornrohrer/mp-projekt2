@@ -347,6 +347,7 @@ static bool can_move_to_foundation(Card card, CardNode *foundation) {
     return card.rank == top.rank + 1 && card.suit == top.suit;
 }
 
+// todo: Function move_card_to_foundation
 
 // startup kommandoer
 static int is_startup_command(const char *command) {
