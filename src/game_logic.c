@@ -348,9 +348,10 @@ static bool can_move_to_foundation(Card card, CardNode *foundation) {
 }
 
 // todo: Function move_card_to_foundation
+// Card card might have to be CardNode *card to append
 static Card move_card_to_foundation(Card card, CardNode **foundation) {
     Card top = peek_tail(*foundation);
-
+    // Append the card to the tail of foundation
     if (can_move_to_foundation(card, *foundation)) {
          top = card;
          return top;
