@@ -15,5 +15,6 @@ typedef struct {
 } Location;
 
 int parse_location(const char *s, Location *out);
+int parse_move(const char *input, Location *from, Location *to);
 
 #endif

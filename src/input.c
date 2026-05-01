@@ -54,3 +54,37 @@ int parse_location(const char *s, Location *out) {
 
     return 0;
 }
+
+int parse_move(const char *input, Location *from, Location *to) {
+    if (input == NULL || from == NULL || to == NULL) {
+        return 0;
+    }
+
+    const char *arrow = strstr(input, "->");
+    if (arrow == NULL) {
+        return 0;
+    }
+
+    size_t from_len = (size_t) (arrow - input);
+    if (from_len < 2 || from_len > 4) {
+        return 0;
+    }
+
+    char from_buf[8];
+    memcpy(from_buf, input, from_len);
+    from_buf[from_len] = '\0';
+
+    const char *to_part = arrow + 2;
+    size_t to_len = strlen(to_part);
+    if (to_len < 2 || to_len > 4) {
+        return 0;
+    }
+
+    if (!parse_location(from_buf, from)) {
+        return 0;
+    }
+    if (!parse_location(to_part, to)) {
+        return 0;
+    }
+    return 1;
+}
