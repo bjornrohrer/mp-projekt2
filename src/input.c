@@ -21,7 +21,9 @@ int parse_location(const char *s, Location *out) {
     }
 
     if (prefix == 'C') {
-        if (digit > '7') return 0;
+        if (digit > '7') {
+            return 0;
+        }
         out->index = digit - '1';
 
         if (length == 2) {
@@ -29,7 +31,9 @@ int parse_location(const char *s, Location *out) {
             return 1;
         }
         if (length == 4) {
-            if (!card_from_string(s + 2, &out->card)) return 0;
+            if (!card_from_string(s + 2, &out->card)) {
+                return 0;
+            }
             out->kind = LOC_COL_CARD;
             return 1;
         }
@@ -37,9 +41,12 @@ int parse_location(const char *s, Location *out) {
     }
 
     if (prefix == 'F') {
-        if (digit > '4') return 0;
-        if (length != 2) return 0;
-
+        if (digit > '4') {
+            return 0;
+        }
+        if (length != 2) {
+            return 0;
+        }
         out->index = digit - '1';
         out->kind = LOC_FOUNDATION;
         return 1;
