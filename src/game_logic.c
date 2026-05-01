@@ -348,7 +348,16 @@ static bool can_move_to_foundation(Card card, CardNode *foundation) {
 }
 
 // todo: Function move_card_to_foundation
+static Card move_card_to_foundation(Card card, CardNode **foundation) {
+    Card top = peek_tail(*foundation);
 
+    if (can_move_to_foundation(card, *foundation)) {
+         top = card;
+         return top;
+            }
+
+    return top;
+}
 // startup kommandoer
 static int is_startup_command(const char *command) {
     if (strcmp(command, "LD") == 0) return 1;
