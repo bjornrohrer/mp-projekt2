@@ -3,13 +3,13 @@
 #include "card.h"
 
 typedef enum {
-    LOC_COL_tail,
-    LOC_col_CARD,
+    LOC_COL_TAIL,
+    LOC_COL_CARD,
     LOC_FOUNDATION
-} locKIND;
+} locKind;
 
 typedef struct {
-    locKIND kind;
+    locKind kind;
     int index;
     Card card;
 } Location;
