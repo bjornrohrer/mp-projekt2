@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include "card.h"
 #include "deck.h"
 #include "list.h"
 #include "input.h"
+#include "text_ui.h"
 
 #define ROWS 11
 #define COLS 7
@@ -31,13 +30,7 @@ static char message[100] = "";
 static int first_col_in_row(int row);
 static void clear_tableau(Gamestate *game);
 static void clear_foundations(Gamestate *game);
-static CardNode *new_node(Card card);
-static int append_card(CardNode **head, Card card);
 static int deal_from_current_deck(Gamestate *game);
-static char rank_char_local(Rank rank);
-static char suit_char_local(Suit suit);
-static void print_card_local(Card card);
-static void print_tableau(const Gamestate *game);
 static int show_current_deck(void);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
@@ -53,7 +46,7 @@ int game_logic_run(void) {
     int parts;
 
     while (running) {
-        print_tableau(&current_game);
+        print_gamestate(&current_game);
         printf("\nLAST Command: %s\n", last_command);
         printf("Message: %s\n", message);
         printf("INPUT > ");
@@ -121,42 +114,6 @@ static void clear_foundations(Gamestate *game) {
     }
 }
 
-// laver en node
-static CardNode *new_node(Card card) {
-    CardNode *node = malloc(sizeof(CardNode));
-
-    if (node == NULL) {
-        return NULL;
-    }
-
-    node->card = card;
-    node->next = NULL;
-    return node;
-}
-
-// tilføjer kort til slutningen af listen
-static int append_card(CardNode **head, Card card) {
-    CardNode *node;
-    CardNode *current;
-
-    node = new_node(card);
-    if (node == NULL) {
-        return 0;
-    }
-
-    if (*head == NULL) {
-        *head = node;
-        return 1;
-    }
-
-    current = *head;
-    while (current->next != NULL) {
-        current = current->next;
-    }
-    current->next = node;
-    return 1;
-}
-
 // deler kort ud
 static int deal_from_current_deck(Gamestate *game) {
     int row;
@@ -198,9 +155,11 @@ static int deal_from_current_deck(Gamestate *game) {
                 card.face_up = true;
             }
 
-            if (!append_card(&game->columns[col], card)) {
+            CardNode *node = node_create(card);
+            if (node == NULL) {
                 return 0;
             }
+            append(&game->columns[col], node);
 
             current = current->next;
             index++;
@@ -208,87 +167,6 @@ static int deal_from_current_deck(Gamestate *game) {
     }
 
     return index == DECK_SIZE;
-}
-
-static char rank_char_local(Rank rank) {
-    switch (rank) {
-        case RANK_ACE: return 'A';
-        case RANK_TWO: return '2';
-        case RANK_THREE: return '3';
-        case RANK_FOUR: return '4';
-        case RANK_FIVE: return '5';
-        case RANK_SIX: return '6';
-        case RANK_SEVEN: return '7';
-        case RANK_EIGHT: return '8';
-        case RANK_NINE: return '9';
-        case RANK_TEN: return 'T';
-        case RANK_JACK: return 'J';
-        case RANK_QUEEN: return 'Q';
-        case RANK_KING: return 'K';
-        default: return '?';
-    }
-}
-
-static char suit_char_local(Suit suit) {
-    switch (suit) {
-        case SUIT_CLUBS: return 'C';
-        case SUIT_DIAMOND: return 'D';
-        case SUIT_HEART: return 'H';
-        case SUIT_SPADE: return 'S';
-        default: return '?';
-    }
-}
-
-// printer kort
-static void print_card_local(Card card) {
-    if (!card.face_up) {
-        printf("[]");
-    } else {
-        printf("%c%c", rank_char_local(card.rank), suit_char_local(card.suit));
-    }
-}
-
-// printer bordet
-static void print_tableau(const Gamestate *game) {
-    int row;
-    int col;
-    CardNode *row_ptrs[COLS];
-    int counts[COLS] = {0};
-    CardNode *tmp;
-
-    for (col = 0; col < COLS; col++) {
-        row_ptrs[col] = game->columns[col];
-        tmp = game->columns[col];
-        while (tmp != NULL) {
-            counts[col]++;
-            tmp = tmp->next;
-        }
-    }
-
-    printf("C1\tC2\tC3\tC4\tC5\tC6\tC7\n\n");
-
-    for (row = 0; row < ROWS; row++) {
-        for (col = 0; col < COLS; col++) {
-            if (row < counts[col] && row_ptrs[col] != NULL) {
-                print_card_local(row_ptrs[col]->card);
-                row_ptrs[col] = row_ptrs[col]->next;
-            }
-            printf("\t");
-        }
-
-        // foundations til højre
-        if (row == 0) {
-            printf("[] F1");
-        } else if (row == 2) {
-            printf("[] F2");
-        } else if (row == 4) {
-            printf("[] F3");
-        } else if (row == 6) {
-            printf("[] F4");
-        }
-
-        printf("\n");
-    }
 }
 
 // viser deck
@@ -323,17 +201,19 @@ static int show_current_deck(void) {
             card = current->card;
             card.face_up = true;
 
-            if (!append_card(&temp_game.columns[col], card)) {
+            CardNode *node = node_create(card);
+            if (node == NULL) {
                 clear_tableau(&temp_game);
                 return 0;
             }
+            append(&temp_game.columns[col], node);
 
             current = current->next;
             index++;
         }
     }
 
-    print_tableau(&temp_game);
+    print_gamestate(&temp_game);
     clear_tableau(&temp_game);
 
     return index == DECK_SIZE;
