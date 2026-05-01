@@ -468,6 +468,33 @@ static int handle_command(const char *command, const char *arg) {
         return 0;
     }
 
+    if (strstr(command, "->") != NULL) {
+        if (current_phase != PHASE_PLAY) {
+            strcpy(message, "Command not available in the STARTUP phase.");
+            return 1;
+        }
+
+        Location from, to;
+        if (!parse_move(command, &from, &to)) {
+            strcpy(message, "Malformed move.");
+            return 1;
+        }
+
+        if (from.kind != LOC_COL_TAIL || to.kind != LOC_FOUNDATION) {
+            strcpy(message, "Not implemented yet.");
+            return 1;
+        }
+
+        if (!move_card_to_foundation(&current_game.columns[from.index],
+                                     &current_game.foundations[to.index])) {
+            strcpy(message, "Illegal move.");
+            return 1;
+        }
+
+        strcpy(message, "OK");
+        return 1;
+    }
+
     strcpy(message, "Command not available yet.");
 
     return 1;
