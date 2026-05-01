@@ -2,10 +2,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "card.h"
 #include "deck.h"
 #include "list.h"
-#include <ctype.h>
+#include "input.h"
 
 #define ROWS 11
 #define COLS 7
