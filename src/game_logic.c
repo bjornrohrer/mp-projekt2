@@ -373,6 +373,7 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
     return 1;
 
 }
+
 // startup kommandoer
 static int is_startup_command(const char *command) {
     if (strcmp(command, "LD") == 0) return 1;
