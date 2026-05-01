@@ -347,17 +347,31 @@ static bool can_move_to_foundation(Card card, CardNode *foundation) {
     return card.rank == top.rank + 1 && card.suit == top.suit;
 }
 
-// todo: Function move_card_to_foundation
-// Card card might have to be CardNode *card to append
-static Card move_card_to_foundation(Card card, CardNode **foundation) {
-    Card top = peek_tail(*foundation);
-    // Append the card to the tail of foundation
-    if (can_move_to_foundation(card, *foundation)) {
-         top = card;
-         return top;
-            }
+static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
+    if (*source == NULL) {
+        return 0;
+    }
 
-    return top;
+   Card top = peek_tail(*source);
+
+    if (!top.face_up) {
+        return 0;
+    }
+
+    if (!can_move_to_foundation(top, *foundation)) {
+        return 0;
+    }
+
+    CardNode *node = node_create(top);
+
+    if (node == NULL) {
+        return 0;
+    }
+
+    pop_tail(source);
+    append(foundation, node);
+    return 1;
+
 }
 // startup kommandoer
 static int is_startup_command(const char *command) {
