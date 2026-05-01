@@ -23,6 +23,12 @@ typedef enum {
     LOC_FOUNDATION
 } locKIND;
 
+typedef struct {
+    locKIND kind;
+    int index;
+    Card card;
+} Location;
+
 // game state
 static Phase current_phase = PHASE_STARTUP;
 // spillets kolonner og foundations
