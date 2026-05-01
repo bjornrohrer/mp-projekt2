@@ -5,6 +5,7 @@
 #include "card.h"
 #include "deck.h"
 #include "list.h"
+#include <ctype.h>
 
 #define ROWS 11
 #define COLS 7
