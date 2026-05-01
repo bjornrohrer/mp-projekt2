@@ -14,4 +14,6 @@ typedef struct {
     Card card;
 } Location;
 
+int parse_location(const char *s, Location *out);
+
 #endif
