@@ -352,7 +352,7 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
         return 0;
     }
 
-   Card top = peek_tail(*source);
+    Card top = peek_tail(*source);
 
     if (!top.face_up) {
         return 0;
