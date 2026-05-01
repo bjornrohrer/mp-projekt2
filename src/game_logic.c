@@ -50,6 +50,7 @@ static void print_card_local(Card card);
 static void print_tableau(const Gamestate *game);
 static int show_current_deck(void);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
+static int move_card_to_foundation(CardNode **source, CardNode **foundation);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
 
