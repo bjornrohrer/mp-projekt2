@@ -29,9 +29,8 @@ static void print_column_header(void) {
     printf("\n");
 }
 
-/* Print one foundation slot inline: "F1:AS" or "F1:--". No newline. */
+/* Print one foundation slot inline: "AS F1" or "[] F1". No newline. */
 static void print_foundation(int index, CardNode *foundation) {
-    printf("F%d:", index + 1);
     if (foundation == NULL) {
         printf("[]");
     } else {
@@ -41,6 +40,7 @@ static void print_foundation(int index, CardNode *foundation) {
         format_card(top, buf);
         printf("%s", buf);
     }
+    printf(" F%d", index + 1);
 }
 
 void print_gamestate(const Gamestate *gs) {
