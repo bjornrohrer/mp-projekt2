@@ -33,7 +33,7 @@ static void print_column_header(void) {
 static void print_foundation(int index, CardNode *foundation) {
     printf("F%d:", index + 1);
     if (foundation == NULL) {
-        printf("--");
+        printf("[]");
     } else {
         Card top = peek_tail(foundation);
         char buf[3];
