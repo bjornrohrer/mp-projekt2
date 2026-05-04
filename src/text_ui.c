@@ -29,21 +29,18 @@ static void print_column_header(void) {
     printf("\n");
 }
 
-/* Print foundations on a single line: F1:AS  F2:--  F3:--  F4:-- */
-static void print_foundations(CardNode *const foundations[NUM_FOUNDATIONS]) {
-    for (int i = 0; i < NUM_FOUNDATIONS; i++) {
-        printf("F%d:", i + 1);
-        if (foundations[i] == NULL) {
-            printf("--  ");
-        } else {
-            Card top = peek_tail(foundations[i]);
-            char buf[3];
-            top.face_up = true;
-            format_card(top, buf);
-            printf("%s  ", buf);
-        }
+/* Print one foundation slot inline: "F1:AS" or "F1:--". No newline. */
+static void print_foundation(int index, CardNode *foundation) {
+    printf("F%d:", index + 1);
+    if (foundation == NULL) {
+        printf("--");
+    } else {
+        Card top = peek_tail(foundation);
+        char buf[3];
+        top.face_up = true;
+        format_card(top, buf);
+        printf("%s", buf);
     }
-    printf("\n");
 }
 
 void print_gamestate(const Gamestate *gs) {
@@ -51,7 +48,6 @@ void print_gamestate(const Gamestate *gs) {
         return;
     }
 
-    print_foundations(gs->foundations);
     print_column_header();
 
     int max_height = 0;
@@ -60,6 +56,9 @@ void print_gamestate(const Gamestate *gs) {
         if (len > max_height) {
             max_height = len;
         }
+    }
+    if (max_height < NUM_FOUNDATIONS) {
+        max_height = NUM_FOUNDATIONS;
     }
 
     for (int row = 0; row < max_height; row++) {
@@ -74,6 +73,12 @@ void print_gamestate(const Gamestate *gs) {
                 printf("%-*s", COL_WIDTH, "");
             }
         }
+
+        if (row < NUM_FOUNDATIONS) {
+            printf("   ");
+            print_foundation(row, gs->foundations[row]);
+        }
+
         printf("\n");
     }
 }
