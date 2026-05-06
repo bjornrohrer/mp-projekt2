@@ -4,6 +4,7 @@
 #include "card.h"
 
 int load_deck(const char *filename, CardNode **deck);
+int save_deck(const char *filename, CardNode *deck);
 int generate_unshuffled_deck(CardNode **deck);
 void show_deck(CardNode *deck);
 int save_deck(const char *filename, CardNode *deck);

@@ -26,6 +26,7 @@ static Phase current_phase = PHASE_STARTUP;
 static Gamestate current_game = {0};
 static CardNode *current_deck = NULL;
 static int deck_loaded = 0;
+static int show_deck_view = 0;
 static char last_command[40] = "";
 static char message[100] = "";
 
@@ -34,7 +35,7 @@ static void clear_tableau(Gamestate *game);
 static void clear_foundations(Gamestate *game);
 static int deal_from_current_deck(Gamestate *game);
 static int show_current_deck(void);
-static int save_current_deck(const char *filename);
+static int show_loaded_deck_hidden(void);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
 static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected);
@@ -57,7 +58,12 @@ int game_logic_run(void) {
     int parts;
 
     while (running) {
-        print_gamestate(&current_game);
+        if (show_deck_view) {
+            show_current_deck();
+            show_deck_view = 0;
+        } else {
+            print_gamestate(&current_game);
+        }
         printf("\nLAST Command: %s\n", last_command);
         printf("Message: %s\n", message);
         printf("INPUT > ");
@@ -230,31 +236,56 @@ static int show_current_deck(void) {
     return index == DECK_SIZE;
 }
 
-// gemmer deck til fil
-static int save_current_deck(const char *filename) {
-    FILE *file;
+// viser loaded deck som skjulte kort
+static int show_loaded_deck_hidden(void) {
+    Gamestate temp_game = {0};
     CardNode *current;
+    Card card;
+    int row;
+    int col;
+    int start_col;
+    int index = 0;
 
     if (!deck_loaded || current_deck == NULL) {
         return 0;
     }
 
-    file = fopen(filename, "w");
-    if (file == NULL) {
+    if (list_length(current_deck) != DECK_SIZE) {
         return 0;
     }
 
     current = current_deck;
-    while (current != NULL) {
-        fprintf(file, "%c%c\n",
-                rank_to_char(current->card.rank),
-                suit_to_char(current->card.suit));
-        current = current->next;
+
+    for (row = 0; row < ROWS; row++) {
+        start_col = first_col_in_row(row);
+
+        for (col = start_col; col < COLS; col++) {
+            if (current == NULL) {
+                clear_tableau(&temp_game);
+                return 0;
+            }
+
+            card = current->card;
+            card.face_up = false;
+
+            CardNode *node = node_create(card);
+            if (node == NULL) {
+                clear_tableau(&temp_game);
+                return 0;
+            }
+
+            append(&temp_game.columns[col], node);
+            current = current->next;
+            index++;
+        }
     }
 
-    fclose(file);
-    return 1;
+    clear_tableau(&current_game);
+    current_game = temp_game;
+
+    return index == DECK_SIZE;
 }
+
 
 
 // Regler for foundations
@@ -473,16 +504,26 @@ static int handle_command(const char *command, const char *arg) {
         }
 
         deck_loaded = 1;
+        if (!show_loaded_deck_hidden()) {
+            strcpy(message, "Could not show deck.");
+            return 1;
+        }
         strcpy(message, "OK");
         return 1;
     }
 
     if (strcmp(command, "SW") == 0) {
-        if (!show_current_deck()) {
+        if (!deck_loaded || current_deck == NULL) {
             strcpy(message, "No deck loaded.");
             return 1;
         }
 
+        if (list_length(current_deck) != DECK_SIZE) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        show_deck_view = 1;
         strcpy(message, "OK");
         return 1;
     }
@@ -494,7 +535,7 @@ static int handle_command(const char *command, const char *arg) {
             filename = "cards.txt";
         }
 
-        if (!save_current_deck(filename)) {
+        if (!save_deck(filename, current_deck)) {
             strcpy(message, "Could not save deck.");
             return 1;
         }
@@ -554,6 +595,8 @@ static int handle_command(const char *command, const char *arg) {
             strcpy(message, "No deck loaded.");
             return 1;
         }
+
+        clear_tableau(&current_game);
 
         if (!deal_from_current_deck(&current_game)) {
             strcpy(message, "Error while dealing cards");

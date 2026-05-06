@@ -72,6 +72,32 @@ int load_deck(const char *filename, CardNode **deck) {
     return 1;
 }
 
+/* SD: gemmer deck til fil */
+int save_deck(const char *filename, CardNode *deck) {
+    FILE *file;
+    CardNode *current;
+
+    if (filename == NULL || deck == NULL) {
+        return 0;
+    }
+
+    file = fopen(filename, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    current = deck;
+    while (current != NULL) {
+        fprintf(file, "%c%c\n",
+                rank_to_char(current->card.rank),
+                suit_to_char(current->card.suit));
+        current = current->next;
+    }
+
+    fclose(file);
+    return 1;
+}
+
 /* Laver et nyt standard deck */
 int generate_unshuffled_deck(CardNode **deck) {
     CardNode *temp_deck = NULL;
@@ -165,28 +191,6 @@ void show_deck(CardNode *deck) {
 
         current = current->next;
     }
-}
-
-/* Gemmer decket i fil */
-int save_deck(const char *filename, CardNode *deck) {
-    FILE *file = fopen(filename, "w");
-    CardNode *current = deck;
-
-    if (file == NULL) {
-        return 0;
-    }
-
-    /* Skriver hvert kort til filen */
-    while (current != NULL) {
-        fprintf(file, "%c%c\n",
-                rank_to_char(current->card.rank),
-                suit_to_char(current->card.suit));
-
-        current = current->next;
-    }
-
-    fclose(file);
-    return 1;
 }
 
 /* SI: splitter ved valgt kort og fletter delene */
