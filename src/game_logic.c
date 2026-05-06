@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
 #include "card.h"
 #include "deck.h"
 #include "list.h"
@@ -32,6 +34,8 @@ static void clear_tableau(Gamestate *game);
 static void clear_foundations(Gamestate *game);
 static int deal_from_current_deck(Gamestate *game);
 static int show_current_deck(void);
+static int save_current_deck(const char *filename);
+static int shuffle_interleave_split(CardNode **deck, int split);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
 static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected);
@@ -40,6 +44,8 @@ static void flip_new_bottom_card(CardNode **column);
 static bool can_place_on_column(Card card, CardNode *destination);
 static int move_bottom_card_to_column(CardNode **source, CardNode **destination);
 static int move_stack_to_column(CardNode **source, CardNode **destination, Card selected);
+static int is_game_won(void);
+static void set_move_message(void);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
 
@@ -225,6 +231,85 @@ static int show_current_deck(void) {
     return index == DECK_SIZE;
 }
 
+// gemmer deck til fil
+static int save_current_deck(const char *filename) {
+    FILE *file;
+    CardNode *current;
+
+    if (!deck_loaded || current_deck == NULL) {
+        return 0;
+    }
+
+    file = fopen(filename, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    current = current_deck;
+    while (current != NULL) {
+        fprintf(file, "%c%c\n",
+                rank_to_char(current->card.rank),
+                suit_to_char(current->card.suit));
+        current = current->next;
+    }
+
+    fclose(file);
+    return 1;
+}
+
+// SI shuffle med split
+static int shuffle_interleave_split(CardNode **deck, int split) {
+    CardNode *left;
+    CardNode *right;
+    CardNode *new_deck = NULL;
+    CardNode *current;
+    CardNode *next;
+    int i;
+    int length;
+
+    if (deck == NULL || *deck == NULL) {
+        return 0;
+    }
+
+    length = list_length(*deck);
+    if (split <= 0 || split >= length) {
+        return 0;
+    }
+
+    left = *deck;
+    current = left;
+
+    for (i = 1; i < split; i++) {
+        current = current->next;
+    }
+
+    right = current->next;
+    current->next = NULL;
+
+    while (left != NULL && right != NULL) {
+        next = left->next;
+        left->next = NULL;
+        append(&new_deck, left);
+        left = next;
+
+        next = right->next;
+        right->next = NULL;
+        append(&new_deck, right);
+        right = next;
+    }
+
+    if (left != NULL) {
+        append_sublist(&new_deck, left);
+    }
+
+    if (right != NULL) {
+        append_sublist(&new_deck, right);
+    }
+
+    *deck = new_deck;
+    return 1;
+}
+
 // Regler for foundations
 static bool can_move_to_foundation(Card card, CardNode *foundation) {
     if (foundation == NULL) {
@@ -406,12 +491,15 @@ static int is_startup_command(const char *command) {
     if (strcmp(command, "SI") == 0) return 1;
     if (strcmp(command, "SR") == 0) return 1;
     if (strcmp(command, "SD") == 0) return 1;
-    if (strcmp(command, "QQ") == 0) return 1;
     return 0;
 }
 
 // tager imod input
 static int handle_command(const char *command, const char *arg) {
+    if (strcmp(command, "QQ") == 0) {
+        strcpy(message, "OK");
+        return 0;
+    }
     if (current_phase == PHASE_PLAY && is_startup_command(command)) {
         strcpy(message, "Command not available in the PLAY phase.");
         return 1;
@@ -452,6 +540,63 @@ static int handle_command(const char *command, const char *arg) {
         return 1;
     }
 
+    if (strcmp(command, "SD") == 0) {
+        const char *filename = arg;
+
+        if (filename == NULL) {
+            filename = "cards.txt";
+        }
+
+        if (!save_current_deck(filename)) {
+            strcpy(message, "Could not save deck.");
+            return 1;
+        }
+
+        strcpy(message, "OK");
+        return 1;
+    }
+
+    if (strcmp(command, "SI") == 0) {
+        int split;
+        int length;
+
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        length = list_length(current_deck);
+
+        if (arg == NULL) {
+            srand((unsigned int) time(NULL));
+            split = (rand() % (length - 1)) + 1;
+        } else {
+            if (sscanf(arg, "%d", &split) != 1) {
+                strcpy(message, "Invalid split.");
+                return 1;
+            }
+        }
+
+        if (!shuffle_interleave_split(&current_deck, split)) {
+            strcpy(message, "Invalid split.");
+            return 1;
+        }
+
+        strcpy(message, "OK");
+        return 1;
+    }
+
+    if (strcmp(command, "SR") == 0) {
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        shuffle_random(&current_deck);
+        strcpy(message, "OK");
+        return 1;
+    }
+
     if (strcmp(command, "P") == 0) {
         if (current_phase == PHASE_PLAY) {
             strcpy(message, "Command not available in the PLAY phase.");
@@ -485,10 +630,6 @@ static int handle_command(const char *command, const char *arg) {
         return 1;
     }
 
-    if (strcmp(command, "QQ") == 0) {
-        strcpy(message, "OK");
-        return 0;
-    }
 
     if (strstr(command, "->") != NULL) {
         if (current_phase != PHASE_PLAY) {
@@ -509,7 +650,7 @@ static int handle_command(const char *command, const char *arg) {
                 return 1;
             }
 
-            strcpy(message, "OK");
+            set_move_message();
             return 1;
         }
 
@@ -521,7 +662,7 @@ static int handle_command(const char *command, const char *arg) {
                 return 1;
             }
 
-            strcpy(message, "OK");
+            set_move_message();
             return 1;
         }
 
@@ -532,7 +673,7 @@ static int handle_command(const char *command, const char *arg) {
                 return 1;
             }
 
-            strcpy(message, "OK");
+            set_move_message();
             return 1;
         }
 
@@ -543,7 +684,7 @@ static int handle_command(const char *command, const char *arg) {
                 return 1;
             }
 
-            strcpy(message, "OK");
+            set_move_message();
             return 1;
         }
         if (from.kind == LOC_COL_CARD && to.kind == LOC_COL_TAIL) {
@@ -554,7 +695,7 @@ static int handle_command(const char *command, const char *arg) {
                 return 1;
             }
 
-            strcpy(message, "OK");
+            set_move_message();
             return 1;
         }
 
@@ -565,4 +706,25 @@ static int handle_command(const char *command, const char *arg) {
     strcpy(message, "Command not available yet.");
 
     return 1;
+}
+
+// tjekker om spillet er vundet
+static int is_game_won(void) {
+    int total = 0;
+    int i;
+
+    for (i = 0; i < FOUNDATIONS; i++) {
+        total += list_length(current_game.foundations[i]);
+    }
+
+    return total == DECK_SIZE;
+}
+
+// besked efter et lovligt move
+static void set_move_message(void) {
+    if (is_game_won()) {
+        strcpy(message, "You won.");
+    } else {
+        strcpy(message, "OK");
+    }
 }
