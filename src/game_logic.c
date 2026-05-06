@@ -531,6 +531,11 @@ static int handle_command(const char *command, const char *arg) {
     if (strcmp(command, "SD") == 0) {
         const char *filename = arg;
 
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
         if (filename == NULL) {
             filename = "cards.txt";
         }
@@ -710,7 +715,7 @@ static int is_game_won(void) {
     return total == DECK_SIZE;
 }
 
-// besked efter et lovligt move
+// besked efter et legal move
 static void set_move_message(void) {
     if (is_game_won()) {
         strcpy(message, "You won.");
