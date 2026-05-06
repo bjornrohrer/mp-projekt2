@@ -236,6 +236,60 @@ void shuffle_interleave_from_card(CardNode **deck, Rank rank, Suit suit) {
     *deck = shuffled;
 }
 
+/* SI: splitter ved antal kort og fletter delene */
+int shuffle_interleave_split(CardNode **deck, int split) {
+    CardNode *left;
+    CardNode *right;
+    CardNode *shuffled = NULL;
+    CardNode *current;
+    CardNode *next;
+    int i;
+    int length;
+
+    if (deck == NULL || *deck == NULL) {
+        return 0;
+    }
+
+    length = list_length(*deck);
+
+    if (split <= 0 || split >= length) {
+        return 0;
+    }
+
+    left = *deck;
+    current = left;
+
+    for (i = 1; i < split; i++) {
+        current = current->next;
+    }
+
+    right = current->next;
+    current->next = NULL;
+
+    while (left != NULL && right != NULL) {
+        next = left->next;
+        left->next = NULL;
+        append(&shuffled, left);
+        left = next;
+
+        next = right->next;
+        right->next = NULL;
+        append(&shuffled, right);
+        right = next;
+    }
+
+    if (left != NULL) {
+        append_sublist(&shuffled, left);
+    }
+
+    if (right != NULL) {
+        append_sublist(&shuffled, right);
+    }
+
+    *deck = shuffled;
+    return 1;
+}
+
 /* SR: blander decket tilfældigt */
 void shuffle_random(CardNode **deck) {
     static int seeded = 0;

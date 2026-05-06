@@ -35,7 +35,6 @@ static void clear_foundations(Gamestate *game);
 static int deal_from_current_deck(Gamestate *game);
 static int show_current_deck(void);
 static int save_current_deck(const char *filename);
-static int shuffle_interleave_split(CardNode **deck, int split);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
 static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected);
@@ -257,58 +256,6 @@ static int save_current_deck(const char *filename) {
     return 1;
 }
 
-// SI shuffle med split
-static int shuffle_interleave_split(CardNode **deck, int split) {
-    CardNode *left;
-    CardNode *right;
-    CardNode *new_deck = NULL;
-    CardNode *current;
-    CardNode *next;
-    int i;
-    int length;
-
-    if (deck == NULL || *deck == NULL) {
-        return 0;
-    }
-
-    length = list_length(*deck);
-    if (split <= 0 || split >= length) {
-        return 0;
-    }
-
-    left = *deck;
-    current = left;
-
-    for (i = 1; i < split; i++) {
-        current = current->next;
-    }
-
-    right = current->next;
-    current->next = NULL;
-
-    while (left != NULL && right != NULL) {
-        next = left->next;
-        left->next = NULL;
-        append(&new_deck, left);
-        left = next;
-
-        next = right->next;
-        right->next = NULL;
-        append(&new_deck, right);
-        right = next;
-    }
-
-    if (left != NULL) {
-        append_sublist(&new_deck, left);
-    }
-
-    if (right != NULL) {
-        append_sublist(&new_deck, right);
-    }
-
-    *deck = new_deck;
-    return 1;
-}
 
 // Regler for foundations
 static bool can_move_to_foundation(Card card, CardNode *foundation) {
