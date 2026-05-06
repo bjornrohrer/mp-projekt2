@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "card.h"
 #include "list.h"
@@ -237,6 +238,7 @@ void shuffle_interleave_from_card(CardNode **deck, Rank rank, Suit suit) {
 
 /* SR: blander decket tilfældigt */
 void shuffle_random(CardNode **deck) {
+    static int seeded = 0;
     CardNode *shuffled = NULL;
     CardNode *current;
     CardNode *next;
@@ -246,7 +248,10 @@ void shuffle_random(CardNode **deck) {
         return;
     }
 
-    srand((unsigned int) time(NULL));
+    if (!seeded) {
+        srand((unsigned int) time(NULL) ^ (unsigned int) getpid());
+        seeded = 1;
+    }
 
     current = *deck;
 
