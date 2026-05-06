@@ -346,7 +346,7 @@ static int is_startup_command(const char *command) {
     return 0;
 }
 
-// håndterer input
+// tager imod input
 static int handle_command(const char *command, const char *arg) {
     if (current_phase == PHASE_PLAY && is_startup_command(command)) {
         strcpy(message, "Command not available in the PLAY phase.");
