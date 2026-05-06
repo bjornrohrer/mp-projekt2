@@ -216,3 +216,15 @@ void free_list(CardNode **head) {
     *head = NULL;
 }
 
+CardNode *tail_node(CardNode *head) {
+    if (head == NULL) {
+        return NULL;
+    }
+
+    CardNode *current = head;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+
+    return current;
+}

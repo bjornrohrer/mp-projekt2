@@ -252,6 +252,12 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
     }
 
     pop_tail(source);
+
+    CardNode *tail = tail_node(*source);
+    if (tail != NULL && !tail->card.face_up) {
+        tail->card.face_up = true;
+    }
+
     append(foundation, node);
     return 1;
 
