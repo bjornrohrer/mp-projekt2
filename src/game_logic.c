@@ -34,6 +34,12 @@ static int deal_from_current_deck(Gamestate *game);
 static int show_current_deck(void);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
+static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected);
+static int move_foundation_to_column(CardNode **foundation, CardNode **destination);
+static void flip_new_bottom_card(CardNode **column);
+static bool can_place_on_column(Card card, CardNode *destination);
+static int move_bottom_card_to_column(CardNode **source, CardNode **destination);
+static int move_stack_to_column(CardNode **source, CardNode **destination, Card selected);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
 
@@ -253,14 +259,144 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
 
     pop_tail(source);
 
-    CardNode *tail = tail_node(*source);
-    if (tail != NULL && !tail->card.face_up) {
-        tail->card.face_up = true;
-    }
+    flip_new_bottom_card(source);
 
     append(foundation, node);
     return 1;
+}
+// flytter valgt kort til foundation hvis det er nederst
+static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected) {
+    CardNode *current;
 
+    if (*source == NULL) {
+        return 0;
+    }
+
+    current = *source;
+    while (current != NULL) {
+        if (current->card.rank == selected.rank && current->card.suit == selected.suit) {
+            break;
+        }
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        return 0;
+    }
+
+    if (current->next != NULL) {
+        return 0;
+    }
+
+    return move_card_to_foundation(source, foundation);
+}
+// flytter fra foundation til kolonne
+static int move_foundation_to_column(CardNode **foundation, CardNode **destination) {
+    if (*foundation == NULL) {
+        return 0;
+    }
+
+    Card card = peek_tail(*foundation);
+
+    if (!can_place_on_column(card, *destination)) {
+        return 0;
+    }
+
+    CardNode *node = node_create(card);
+    if (node == NULL) {
+        return 0;
+    }
+
+    pop_tail(foundation);
+    append(destination, node);
+
+    return 1;
+}
+// vender nyt bundkort hvis det var skjult
+static void flip_new_bottom_card(CardNode **column) {
+    CardNode *tail = tail_node(*column);
+
+    if (tail != NULL && !tail->card.face_up) {
+        tail->card.face_up = true;
+    }
+}
+
+// tjekker om et kort må ligge nederst i en kolonne
+static bool can_place_on_column(Card card, CardNode *destination) {
+    if (destination == NULL) {
+        return card.rank == RANK_KING;
+    }
+
+    Card bottom = peek_tail(destination);
+
+    return bottom.rank == card.rank + 1 && bottom.suit != card.suit;
+}
+
+// flytter nederste kort fra en kolonne til en anden
+static int move_bottom_card_to_column(CardNode **source, CardNode **destination) {
+    if (*source == NULL) {
+        return 0;
+    }
+
+    Card card = peek_tail(*source);
+
+    if (!card.face_up) {
+        return 0;
+    }
+
+    if (!can_place_on_column(card, *destination)) {
+        return 0;
+    }
+
+    CardNode *node = node_create(card);
+    if (node == NULL) {
+        return 0;
+    }
+
+    pop_tail(source);
+    flip_new_bottom_card(source);
+    append(destination, node);
+
+    return 1;
+}
+// flytter fra et bestemt kort og ned
+static int move_stack_to_column(CardNode **source, CardNode **destination, Card selected) {
+    CardNode *current;
+    CardNode *sublist;
+
+    if (*source == NULL) {
+        return 0;
+    }
+
+    current = *source;
+    while (current != NULL) {
+        if (current->card.rank == selected.rank && current->card.suit == selected.suit) {
+            break;
+        }
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        return 0;
+    }
+
+    if (!current->card.face_up) {
+        return 0;
+    }
+
+    if (!can_place_on_column(current->card, *destination)) {
+        return 0;
+    }
+
+    sublist = split_list(source, selected.rank, selected.suit);
+    if (sublist == NULL) {
+        return 0;
+    }
+
+    append_sublist(destination, sublist);
+    flip_new_bottom_card(source);
+
+    return 1;
 }
 
 // startup kommandoer
@@ -366,18 +502,63 @@ static int handle_command(const char *command, const char *arg) {
             return 1;
         }
 
-        if (from.kind != LOC_COL_TAIL || to.kind != LOC_FOUNDATION) {
-            strcpy(message, "Not implemented yet.");
+        if (from.kind == LOC_COL_TAIL && to.kind == LOC_FOUNDATION) {
+            if (!move_card_to_foundation(&current_game.columns[from.index],
+                                         &current_game.foundations[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            strcpy(message, "OK");
             return 1;
         }
 
-        if (!move_card_to_foundation(&current_game.columns[from.index],
-                                     &current_game.foundations[to.index])) {
-            strcpy(message, "Illegal move.");
+        if (from.kind == LOC_COL_CARD && to.kind == LOC_FOUNDATION) {
+            if (!move_selected_card_to_foundation(&current_game.columns[from.index],
+                                                  &current_game.foundations[to.index],
+                                                  from.card)) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            strcpy(message, "OK");
             return 1;
         }
 
-        strcpy(message, "OK");
+        if (from.kind == LOC_FOUNDATION && to.kind == LOC_COL_TAIL) {
+            if (!move_foundation_to_column(&current_game.foundations[from.index],
+                                           &current_game.columns[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            strcpy(message, "OK");
+            return 1;
+        }
+
+        if (from.kind == LOC_COL_TAIL && to.kind == LOC_COL_TAIL) {
+            if (!move_bottom_card_to_column(&current_game.columns[from.index],
+                                            &current_game.columns[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            strcpy(message, "OK");
+            return 1;
+        }
+        if (from.kind == LOC_COL_CARD && to.kind == LOC_COL_TAIL) {
+            if (!move_stack_to_column(&current_game.columns[from.index],
+                                      &current_game.columns[to.index],
+                                      from.card)) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            strcpy(message, "OK");
+            return 1;
+        }
+
+        strcpy(message, "Not implemented yet.");
         return 1;
     }
 

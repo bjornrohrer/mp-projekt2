@@ -30,8 +30,8 @@ int parse_location(const char *s, Location *out) {
             out->kind = LOC_COL_TAIL;
             return 1;
         }
-        if (length == 4) {
-            if (!card_from_string(s + 2, &out->card)) {
+        if (length == 5 && s[2] == ':') {
+            if (!card_from_string(s + 3, &out->card)) {
                 return 0;
             }
             out->kind = LOC_COL_CARD;
@@ -66,7 +66,7 @@ int parse_move(const char *input, Location *from, Location *to) {
     }
 
     size_t from_len = (size_t) (arrow - input);
-    if (from_len < 2 || from_len > 4) {
+    if (from_len < 2 || from_len > 5) {
         return 0;
     }
 
@@ -76,7 +76,7 @@ int parse_move(const char *input, Location *from, Location *to) {
 
     const char *to_part = arrow + 2;
     size_t to_len = strlen(to_part);
-    if (to_len < 2 || to_len > 4) {
+    if (to_len < 2 || to_len > 5) {
         return 0;
     }
 
