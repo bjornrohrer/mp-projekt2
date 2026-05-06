@@ -1,1 +1,7 @@
-
+build/
+build-local/
+cmake-build-debug/
+__pycache__/
+.venv/
+.idea/
+.DS_Store
