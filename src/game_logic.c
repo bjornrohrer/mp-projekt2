@@ -28,7 +28,7 @@ static CardNode *current_deck = NULL;
 static int deck_loaded = 0;
 static int show_deck_view = 0;
 static char last_command[40] = "";
-static char message[100] = "";
+static char message[160] = "";
 
 static int first_col_in_row(int row);
 static void clear_tableau(Gamestate *game);
@@ -48,6 +48,17 @@ static int is_game_won(void);
 static void set_move_message(void);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
+#ifdef GAME_LOGIC_BACKEND
+static void backend_format_card(Card card, char out[3]);
+static void backend_print_pile(const char *prefix, int index, CardNode *pile);
+static void backend_print_state(void);
+static void backend_print_deck_view(void);
+static void backend_print_allowed_command(int *first, const char *command);
+static void backend_print_column_card_command(int *first, int column, Card card, const char *target);
+static void backend_print_allowed_commands(void);
+static void backend_print_response(void);
+static int game_logic_backend_run(void);
+#endif
 
 // kører input loopet
 int game_logic_run(void) {
@@ -81,7 +92,7 @@ int game_logic_run(void) {
             continue;
         }
 
-        strcpy(last_command, input);
+        snprintf(last_command, sizeof(last_command), "%s", input);
 
         if (parts == 1) {
             running = handle_command(command, NULL);
@@ -101,16 +112,22 @@ static int first_col_in_row(int row) {
     if (row == 0) {
         return 0;
     }
-    if (row <= 2) {
+    if (row <= 5) {
         return 1;
     }
-    if (row <= 5) {
+    if (row == 6) {
         return 2;
     }
-    if (row <= 8) {
+    if (row == 7) {
         return 3;
     }
-    return 4;
+    if (row == 8) {
+        return 4;
+    }
+    if (row == 9) {
+        return 5;
+    }
+    return 6;
 }
 
 // rydder kolonnerne
@@ -475,13 +492,19 @@ static int handle_command(const char *command, const char *arg) {
 
         if (arg == NULL) {
             if (!generate_unshuffled_deck(&current_deck)) {
-                strcpy(message, "Could not load deck.");
+                snprintf(message, sizeof(message), "Could not load deck.");
                 deck_loaded = 0;
                 return 1;
             }
         } else {
             if (!load_deck(arg, &current_deck)) {
-                strcpy(message, "Could not load deck.");
+                const char *error = deck_last_error();
+
+                if (error != NULL && error[0] != '\0') {
+                    snprintf(message, sizeof(message), "%s", error);
+                } else {
+                    snprintf(message, sizeof(message), "Could not load deck.");
+                }
                 deck_loaded = 0;
                 return 1;
             }
@@ -525,7 +548,13 @@ static int handle_command(const char *command, const char *arg) {
         }
 
         if (!save_deck(filename, current_deck)) {
-            strcpy(message, "Could not save deck.");
+            const char *error = deck_last_error();
+
+            if (error != NULL && error[0] != '\0') {
+                snprintf(message, sizeof(message), "%s", error);
+            } else {
+                snprintf(message, sizeof(message), "Could not save deck.");
+            }
             return 1;
         }
 
@@ -707,3 +736,244 @@ static void set_move_message(void) {
         strcpy(message, "OK");
     }
 }
+
+#ifdef GAME_LOGIC_BACKEND
+static void backend_format_card(Card card, char out[3]) {
+    if (!card.face_up) {
+        out[0] = 'X';
+        out[1] = 'X';
+    } else {
+        out[0] = rank_to_char(card.rank);
+        out[1] = suit_to_char(card.suit);
+    }
+    out[2] = '\0';
+}
+
+static void backend_print_pile(const char *prefix, int index, CardNode *pile) {
+    CardNode *current = pile;
+    int first = 1;
+
+    printf("%s%d:", prefix, index + 1);
+    while (current != NULL) {
+        char token[3];
+
+        backend_format_card(current->card, token);
+        if (!first) {
+            printf(",");
+        }
+        printf("%s", token);
+        first = 0;
+        current = current->next;
+    }
+    printf("\n");
+}
+
+static void backend_print_state(void) {
+    int i;
+
+    printf("PHASE:%s\n", current_phase == PHASE_PLAY ? "PLAY" : "STARTUP");
+    for (i = 0; i < COLS; i++) {
+        backend_print_pile("C", i, current_game.columns[i]);
+    }
+    for (i = 0; i < FOUNDATIONS; i++) {
+        backend_print_pile("F", i, current_game.foundations[i]);
+    }
+}
+
+static void backend_print_deck_view(void) {
+    Gamestate view = {0};
+    CardNode *current = current_deck;
+    int row;
+    int col;
+    int i;
+
+    for (row = 0; row < ROWS && current != NULL; row++) {
+        for (col = 0; col < COLS && current != NULL; col++) {
+            Card card = current->card;
+            CardNode *node;
+
+            card.face_up = true;
+            node = node_create(card);
+            if (node == NULL) {
+                clear_tableau(&view);
+                backend_print_state();
+                return;
+            }
+
+            append(&view.columns[col], node);
+            current = current->next;
+        }
+    }
+
+    printf("PHASE:%s\n", current_phase == PHASE_PLAY ? "PLAY" : "STARTUP");
+    for (i = 0; i < COLS; i++) {
+        backend_print_pile("C", i, view.columns[i]);
+    }
+    for (i = 0; i < FOUNDATIONS; i++) {
+        backend_print_pile("F", i, view.foundations[i]);
+    }
+
+    clear_tableau(&view);
+}
+
+static void backend_print_allowed_command(int *first, const char *command) {
+    if (!*first) {
+        printf(",");
+    }
+    printf("%s", command);
+    *first = 0;
+}
+
+static void backend_print_column_card_command(int *first, int column, Card card, const char *target) {
+    char token[3];
+    char command[20];
+
+    backend_format_card(card, token);
+    snprintf(command, sizeof(command), "C%d:%s->%s", column + 1, token, target);
+    backend_print_allowed_command(first, command);
+}
+
+static void backend_print_allowed_commands(void) {
+    int first = 1;
+    int source_index;
+    int target_index;
+
+    printf("A:");
+
+    if (current_phase == PHASE_STARTUP) {
+        backend_print_allowed_command(&first, "LD");
+        if (deck_loaded && current_deck != NULL) {
+            backend_print_allowed_command(&first, "SW");
+            backend_print_allowed_command(&first, "SI");
+            backend_print_allowed_command(&first, "SR");
+            backend_print_allowed_command(&first, "SD");
+            backend_print_allowed_command(&first, "P");
+        }
+        backend_print_allowed_command(&first, "QQ");
+        printf("\n");
+        return;
+    }
+
+    backend_print_allowed_command(&first, "Q");
+    backend_print_allowed_command(&first, "QQ");
+
+    for (source_index = 0; source_index < COLS; source_index++) {
+        CardNode *source = current_game.columns[source_index];
+        CardNode *current = source;
+
+        while (current != NULL) {
+            if (current->card.face_up) {
+                for (target_index = 0; target_index < COLS; target_index++) {
+                    char target[4];
+
+                    if (source_index == target_index) {
+                        continue;
+                    }
+                    if (!can_place_on_column(current->card, current_game.columns[target_index])) {
+                        continue;
+                    }
+
+                    snprintf(target, sizeof(target), "C%d", target_index + 1);
+                    backend_print_column_card_command(&first, source_index, current->card, target);
+                }
+
+                if (current->next == NULL) {
+                    for (target_index = 0; target_index < FOUNDATIONS; target_index++) {
+                        char target[4];
+
+                        if (!can_move_to_foundation(current->card, current_game.foundations[target_index])) {
+                            continue;
+                        }
+
+                        snprintf(target, sizeof(target), "F%d", target_index + 1);
+                        backend_print_column_card_command(&first, source_index, current->card, target);
+                    }
+                }
+            }
+            current = current->next;
+        }
+    }
+
+    for (source_index = 0; source_index < FOUNDATIONS; source_index++) {
+        Card card;
+
+        if (current_game.foundations[source_index] == NULL) {
+            continue;
+        }
+
+        card = peek_tail(current_game.foundations[source_index]);
+        for (target_index = 0; target_index < COLS; target_index++) {
+            char command[12];
+
+            if (!can_place_on_column(card, current_game.columns[target_index])) {
+                continue;
+            }
+
+            snprintf(command, sizeof(command), "F%d->C%d", source_index + 1, target_index + 1);
+            backend_print_allowed_command(&first, command);
+        }
+    }
+
+    printf("\n");
+}
+
+static void backend_print_response(void) {
+    int success = message[0] == '\0' || strcmp(message, "OK") == 0 || strcmp(message, "You won.") == 0;
+
+    printf("STATUS:%s\n", success ? "OK" : "ERROR");
+    printf("MESSAGE:%s\n", message);
+    printf("LAST:%s\n", last_command);
+    if (show_deck_view) {
+        backend_print_deck_view();
+        show_deck_view = 0;
+    } else {
+        backend_print_state();
+    }
+    backend_print_allowed_commands();
+    printf("END\n");
+    fflush(stdout);
+}
+
+static int game_logic_backend_run(void) {
+    char input[140];
+    char command[40];
+    char arg[100];
+    int running = 1;
+    int parts;
+
+    while (running && fgets(input, sizeof(input), stdin) != NULL) {
+        input[strcspn(input, "\n")] = '\0';
+        parts = sscanf(input, "%39s %99s", command, arg);
+
+        if (parts < 1) {
+            last_command[0] = '\0';
+            strcpy(message, "Command not available yet.");
+            backend_print_response();
+            continue;
+        }
+
+        if (strcmp(command, "STATE") == 0) {
+            backend_print_response();
+            continue;
+        }
+
+        snprintf(last_command, sizeof(last_command), "%s", input);
+        if (parts == 1) {
+            running = handle_command(command, NULL);
+        } else {
+            running = handle_command(command, arg);
+        }
+
+        backend_print_response();
+    }
+
+    clear_tableau(&current_game);
+    clear_foundations(&current_game);
+    free_list(&current_deck);
+    return 0;
+}
+
+int main(void) {
+    return game_logic_backend_run();
+}
+#endif

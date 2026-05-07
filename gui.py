@@ -17,6 +17,8 @@ CARD_COLOR = "#f2f2f2"
 CARD_BACK_COLOR = "#16728a"
 CARD_OUTLINE = "#dddddd"
 FOUNDATION_OUTLINE = "#f2a51a"
+COMMAND_BUTTON_COLOR = "#24484d"
+COMMAND_BUTTON_ACTIVE = "#2f5d63"
 
 
 def find_cmake_program():
@@ -37,10 +39,10 @@ def find_cmake_program():
 def find_backend_program():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
-        os.path.join(base_dir, "build-local", "yukon_backend"),
-        os.path.join(base_dir, "cmake-build-debug", "yukon_backend"),
-        os.path.join(base_dir, "build", "yukon_backend"),
-        os.path.join(base_dir, "yukon_backend"),
+        os.path.join(base_dir, "build-local", "game_logic_backend"),
+        os.path.join(base_dir, "cmake-build-debug", "game_logic_backend"),
+        os.path.join(base_dir, "build", "game_logic_backend"),
+        os.path.join(base_dir, "game_logic_backend"),
     ]
 
     for candidate in candidates:
@@ -48,6 +50,27 @@ def find_backend_program():
             return candidate
 
     return None
+
+
+def backend_is_stale(backend_program):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    sources = [
+        "CMakeLists.txt",
+        os.path.join("src", "game_logic.c"),
+        os.path.join("src", "deck.c"),
+        os.path.join("src", "input.c"),
+        os.path.join("src", "list.c"),
+        os.path.join("src", "card.c"),
+        os.path.join("src", "text_ui.c"),
+    ]
+    backend_time = os.path.getmtime(backend_program)
+
+    for source in sources:
+        source_path = os.path.join(base_dir, source)
+        if os.path.isfile(source_path) and os.path.getmtime(source_path) > backend_time:
+            return True
+
+    return False
 
 
 def build_backend():
@@ -66,7 +89,7 @@ def build_backend():
         cwd=base_dir,
     )
     subprocess.run(
-        [cmake_program, "--build", build_dir, "--target", "yukon_backend"],
+        [cmake_program, "--build", build_dir, "--target", "game_logic_backend"],
         check=True,
         cwd=base_dir,
     )
@@ -74,13 +97,13 @@ def build_backend():
 
 def ensure_backend_program():
     backend_program = find_backend_program()
-    if backend_program is not None:
+    if backend_program is not None and not backend_is_stale(backend_program):
         return backend_program
 
     build_backend()
     backend_program = find_backend_program()
     if backend_program is None:
-        raise RuntimeError("Built yukon_backend, but could not find the executable afterwards.")
+        raise RuntimeError("Built game_logic_backend, but could not find the executable afterwards.")
 
     return backend_program
 
@@ -108,9 +131,60 @@ class ProjektGUI:
         )
         self.message_label.pack(fill="x")
 
+        self.command_frame = tk.Frame(root, bg=BACKGROUND_COLOR)
+        self.command_frame.pack(fill="x", padx=10, pady=(6, 0))
+
+        self.command_label = tk.Label(
+            self.command_frame,
+            text="INPUT >",
+            font=("Arial", 12, "bold"),
+            bg=BACKGROUND_COLOR,
+            fg="white",
+        )
+        self.command_label.pack(side="left")
+
+        self.command_var = tk.StringVar()
+        self.command_entry = tk.Entry(
+            self.command_frame,
+            textvariable=self.command_var,
+            font=("Arial", 12),
+        )
+        self.command_entry.pack(side="left", fill="x", expand=True, padx=8)
+        self.command_entry.bind("<Return>", self.handle_command_submit)
+
+        self.run_button = tk.Button(
+            self.command_frame,
+            text="Run",
+            font=("Arial", 12, "bold"),
+            command=self.handle_command_submit,
+            bg=COMMAND_BUTTON_COLOR,
+            activebackground=COMMAND_BUTTON_ACTIVE,
+            fg="white",
+        )
+        self.run_button.pack(side="left")
+
+        self.quick_frame = tk.Frame(root, bg=BACKGROUND_COLOR)
+        self.quick_frame.pack(fill="x", padx=10, pady=(6, 0))
+
+        self.allowed_label = tk.Label(
+            root,
+            text="",
+            font=("Arial", 12),
+            bg=BACKGROUND_COLOR,
+            fg="white",
+            justify="left",
+            anchor="w",
+            wraplength=WINDOW_WIDTH - 20,
+        )
+        self.allowed_label.pack(fill="x", padx=10)
+
         self.selected_source = None
         self.card_positions = []
         self.foundation_positions = []
+        self.columns = [[], [], [], [], [], [], []]
+        self.foundations = [[], [], [], []]
+        self.allowed_commands = []
+        self.phase = "STARTUP"
 
         self.backend = subprocess.Popen(
             [backend_program],
@@ -122,10 +196,7 @@ class ProjektGUI:
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.canvas.bind("<Button-1>", self.handle_click)
 
-        self.send_command("LD")
-        self.send_command("SR")
-        state_lines = self.send_command("P")
-        self.columns, self.foundations = self.parse_state(state_lines)
+        self.apply_response(self.send_command("STATE"))
         self.draw_board()
 
     def close(self):
@@ -159,22 +230,123 @@ class ProjektGUI:
 
         return lines
 
-    def parse_state(self, lines):
+    def parse_response(self, lines):
         columns = [[], [], [], [], [], [], []]
         foundations = [[], [], [], []]
+        allowed_commands = []
+        status = ""
+        message = ""
+        phase = self.phase
 
         for line in lines:
-            if line.startswith("C"):
+            if line.startswith("STATUS:"):
+                status = line.split(":", 1)[1]
+            elif line.startswith("MESSAGE:"):
+                message = line.split(":", 1)[1]
+            elif line.startswith("PHASE:"):
+                phase = line.split(":", 1)[1]
+            elif line.startswith("A:"):
+                commands_text = line.split(":", 1)[1]
+                allowed_commands = [] if commands_text == "" else commands_text.split(",")
+            elif line.startswith("C"):
                 name, cards_text = line.split(":", 1)
                 index = int(name[1]) - 1
                 columns[index] = [] if cards_text == "" else cards_text.split(",")
-
-            if line.startswith("F"):
+            elif line.startswith("F"):
                 name, cards_text = line.split(":", 1)
                 index = int(name[1]) - 1
                 foundations[index] = [] if cards_text == "" else cards_text.split(",")
 
-        return columns, foundations
+        return {
+            "status": status,
+            "message": message,
+            "phase": phase,
+            "columns": columns,
+            "foundations": foundations,
+            "allowed_commands": allowed_commands,
+        }
+
+    def apply_response(self, lines):
+        response = self.parse_response(lines)
+        self.columns = response["columns"]
+        self.foundations = response["foundations"]
+        self.allowed_commands = response["allowed_commands"]
+        self.phase = response["phase"]
+        self.update_status(response["message"])
+        self.update_allowed_commands()
+        return response
+
+    def update_status(self, message):
+        if message != "":
+            self.message_label.config(text=message)
+
+    def update_allowed_commands(self):
+        if self.allowed_commands:
+            text = "Allowed commands: " + ", ".join(self.allowed_commands)
+        else:
+            text = "Allowed commands: none"
+        self.allowed_label.config(text=text)
+        self.update_quick_commands()
+
+    def update_quick_commands(self):
+        for child in self.quick_frame.winfo_children():
+            child.destroy()
+
+        for command in self.allowed_commands:
+            if "->" in command:
+                continue
+
+            button = tk.Button(
+                self.quick_frame,
+                text=command,
+                font=("Arial", 11, "bold"),
+                command=lambda value=command: self.execute_command(value),
+                bg=COMMAND_BUTTON_COLOR,
+                activebackground=COMMAND_BUTTON_ACTIVE,
+                fg="white",
+                padx=8,
+                pady=2,
+            )
+            button.pack(side="left", padx=(0, 6), pady=(0, 4))
+
+    def handle_command_submit(self, event=None):
+        command = self.command_var.get().strip()
+
+        if command == "":
+            return
+
+        self.execute_command(command)
+
+    def command_is_allowed(self, command):
+        if command in self.allowed_commands:
+            return True
+
+        parts = command.split(maxsplit=1)
+        if len(parts) == 2 and parts[0] in ("LD", "SI", "SD"):
+            return parts[0] in self.allowed_commands
+
+        return False
+
+    def execute_command(self, command):
+        if not self.command_is_allowed(command):
+            self.message_label.config(text="Command not allowed: " + command)
+            self.selected_source = None
+            return
+
+        response = self.apply_response(self.send_command(command))
+        self.draw_board()
+        self.command_var.set("")
+        self.selected_source = None
+
+        if command == "QQ":
+            self.backend = None
+            self.root.destroy()
+            return
+
+        if response["status"] == "OK":
+            self.message_label.config(text=response["message"] if response["message"] != "" else "OK")
+        else:
+            self.message_label.config(text=response["message"])
 
     def draw_board(self):
         self.canvas.delete("all")
@@ -308,17 +480,6 @@ class ProjektGUI:
         clicked_foundation = self.get_clicked_foundation(event.x, event.y)
         clicked_column = self.get_clicked_column(event.x, event.y)
 
-        if clicked_card is not None:
-            if clicked_card["card"] == "XX":
-                self.message_label.config(text="Du kan ikke vælge et face-down kort")
-                return
-
-            column_number = clicked_card["column"] + 1
-            card = clicked_card["card"]
-            self.selected_source = "C" + str(column_number) + card
-            self.message_label.config(text="Valgt: " + card + " fra C" + str(column_number))
-            return
-
         if self.selected_source is not None and clicked_foundation is not None:
             foundation_number = clicked_foundation + 1
             command = self.selected_source + "->F" + str(foundation_number)
@@ -329,24 +490,29 @@ class ProjektGUI:
             column_number = clicked_column + 1
             command = self.selected_source + "->C" + str(column_number)
             self.execute_move(command)
+            return
+
+        if clicked_card is not None:
+            if clicked_card["card"] == "XX":
+                self.message_label.config(text="Du kan ikke vælge et face-down kort")
+                return
+
+            column_number = clicked_card["column"] + 1
+            card = clicked_card["card"]
+            self.selected_source = "C" + str(column_number) + ":" + card
+            self.message_label.config(text="Valgt: " + card + " fra C" + str(column_number))
+            return
+
+        if self.selected_source is None and clicked_foundation is not None:
+            if self.foundations[clicked_foundation]:
+                foundation_number = clicked_foundation + 1
+                card = self.foundations[clicked_foundation][-1]
+                self.selected_source = "F" + str(foundation_number)
+                self.message_label.config(text="Valgt: " + card + " fra F" + str(foundation_number))
+            return
 
     def execute_move(self, command):
-        lines = self.send_command(command)
-        error_message = ""
-
-        for line in lines:
-            if line.startswith("ERROR"):
-                error_message = line
-
-        self.columns, self.foundations = self.parse_state(lines)
-        self.draw_board()
-
-        if error_message != "":
-            self.message_label.config(text=error_message)
-        else:
-            self.message_label.config(text="Move: " + command)
-
-        self.selected_source = None
+        self.execute_command(command)
 
     def get_clicked_card(self, x, y):
         for position in reversed(self.card_positions):
