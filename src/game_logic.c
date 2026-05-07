@@ -193,7 +193,6 @@ static int show_current_deck(void) {
     Card card;
     int row;
     int col;
-    int start_col;
     int index = 0;
 
     if (!deck_loaded || current_deck == NULL) {
@@ -206,15 +205,8 @@ static int show_current_deck(void) {
 
     current = current_deck;
 
-    for (row = 0; row < ROWS; row++) {
-        start_col = first_col_in_row(row);
-
-        for (col = start_col; col < COLS; col++) {
-            if (current == NULL) {
-                clear_tableau(&temp_game);
-                return 0;
-            }
-
+    for (row = 0; row < ROWS && current != NULL; row++) {
+        for (col = 0; col < COLS && current != NULL; col++) {
             card = current->card;
             card.face_up = true;
 
@@ -243,7 +235,6 @@ static int show_loaded_deck_hidden(void) {
     Card card;
     int row;
     int col;
-    int start_col;
     int index = 0;
 
     if (!deck_loaded || current_deck == NULL) {
@@ -256,15 +247,8 @@ static int show_loaded_deck_hidden(void) {
 
     current = current_deck;
 
-    for (row = 0; row < ROWS; row++) {
-        start_col = first_col_in_row(row);
-
-        for (col = start_col; col < COLS; col++) {
-            if (current == NULL) {
-                clear_tableau(&temp_game);
-                return 0;
-            }
-
+    for (row = 0; row < ROWS && current != NULL; row++) {
+        for (col = 0; col < COLS && current != NULL; col++) {
             card = current->card;
             card.face_up = false;
 

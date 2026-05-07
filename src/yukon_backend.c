@@ -33,7 +33,6 @@ static bool cards_match(Card left, Card right);
 static CardNode *tail_node(CardNode *head);
 static CardNode *find_card_node(CardNode *head, Card target);
 static void reveal_exposed_tail(CardNode *column);
-static bool is_red_suit(Suit suit);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static bool can_move_to_column(Card card, CardNode *column);
 static bool move_card_to_foundation(Location from, Location to, char *message, size_t message_size);
@@ -212,9 +211,6 @@ static void reveal_exposed_tail(CardNode *column) {
     }
 }
 
-static bool is_red_suit(Suit suit) {
-    return suit == SUIT_DIAMOND || suit == SUIT_HEART;
-}
 
 static bool can_move_to_foundation(Card card, CardNode *foundation) {
     if (foundation == NULL) {
@@ -237,7 +233,7 @@ static bool can_move_to_column(Card card, CardNode *column) {
         return false;
     }
 
-    return is_red_suit(card.suit) != is_red_suit(top.suit) && card.rank + 1 == top.rank;
+    return card.suit != top.suit && card.rank + 1 == top.rank;
 }
 
 static bool move_card_to_foundation(Location from, Location to, char *message, size_t message_size) {
