@@ -37,10 +37,10 @@ def find_cmake_program():
 def find_backend_program():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
-        os.path.join(base_dir, "build-local", "yukon_backend"),
-        os.path.join(base_dir, "cmake-build-debug", "yukon_backend"),
-        os.path.join(base_dir, "build", "yukon_backend"),
-        os.path.join(base_dir, "yukon_backend"),
+        os.path.join(base_dir, "build-local", "gui_backend"),
+        os.path.join(base_dir, "cmake-build-debug", "gui_backend"),
+        os.path.join(base_dir, "build", "gui_backend"),
+        os.path.join(base_dir, "gui_backend"),
     ]
 
     for candidate in candidates:
@@ -66,7 +66,7 @@ def build_backend():
         cwd=base_dir,
     )
     subprocess.run(
-        [cmake_program, "--build", build_dir, "--target", "yukon_backend"],
+        [cmake_program, "--build", build_dir, "--target", "gui_backend"],
         check=True,
         cwd=base_dir,
     )
@@ -80,7 +80,7 @@ def ensure_backend_program():
     build_backend()
     backend_program = find_backend_program()
     if backend_program is None:
-        raise RuntimeError("Built yukon_backend, but could not find the executable afterwards.")
+        raise RuntimeError("Built gui_backend, but could not find the executable afterwards.")
 
     return backend_program
 
@@ -315,7 +315,7 @@ class ProjektGUI:
 
             column_number = clicked_card["column"] + 1
             card = clicked_card["card"]
-            self.selected_source = "C" + str(column_number) + card
+            self.selected_source = "C" + str(column_number) + ":" + card
             self.message_label.config(text="Valgt: " + card + " fra C" + str(column_number))
             return
 

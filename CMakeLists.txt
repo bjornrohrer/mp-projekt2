@@ -9,15 +9,19 @@ add_executable(mp_projekt2
         src/list.c
         src/deck.c
         src/input.c
+        src/game_engine.c
+        src/game_engine.h
         src/game_logic.c
         src/main_text.c
         src/text_ui.c
         src/card.c)
 
-add_executable(yukon_backend
-        src/yukon_backend.c
+add_executable(gui_backend
+        src/gui_backend.c
         src/card.h
         src/list.c
         src/deck.c
         src/input.c
+        src/game_engine.c
+        src/game_engine.h
         src/card.c)
