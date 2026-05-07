@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
 #include "card.h"
 #include "deck.h"
 #include "list.h"
@@ -24,6 +26,7 @@ static Phase current_phase = PHASE_STARTUP;
 static Gamestate current_game = {0};
 static CardNode *current_deck = NULL;
 static int deck_loaded = 0;
+static int show_deck_view = 0;
 static char last_command[40] = "";
 static char message[100] = "";
 
@@ -32,8 +35,17 @@ static void clear_tableau(Gamestate *game);
 static void clear_foundations(Gamestate *game);
 static int deal_from_current_deck(Gamestate *game);
 static int show_current_deck(void);
+static int show_loaded_deck_hidden(void);
 static bool can_move_to_foundation(Card card, CardNode *foundation);
 static int move_card_to_foundation(CardNode **source, CardNode **foundation);
+static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected);
+static int move_foundation_to_column(CardNode **foundation, CardNode **destination);
+static void flip_new_bottom_card(CardNode **column);
+static bool can_place_on_column(Card card, CardNode *destination);
+static int move_bottom_card_to_column(CardNode **source, CardNode **destination);
+static int move_stack_to_column(CardNode **source, CardNode **destination, Card selected);
+static int is_game_won(void);
+static void set_move_message(void);
 static int is_startup_command(const char *command);
 static int handle_command(const char *command, const char *arg);
 
@@ -46,7 +58,12 @@ int game_logic_run(void) {
     int parts;
 
     while (running) {
-        print_gamestate(&current_game);
+        if (show_deck_view) {
+            show_current_deck();
+            show_deck_view = 0;
+        } else {
+            print_gamestate(&current_game);
+        }
         printf("\nLAST Command: %s\n", last_command);
         printf("Message: %s\n", message);
         printf("INPUT > ");
@@ -219,6 +236,58 @@ static int show_current_deck(void) {
     return index == DECK_SIZE;
 }
 
+// viser loaded deck som skjulte kort
+static int show_loaded_deck_hidden(void) {
+    Gamestate temp_game = {0};
+    CardNode *current;
+    Card card;
+    int row;
+    int col;
+    int start_col;
+    int index = 0;
+
+    if (!deck_loaded || current_deck == NULL) {
+        return 0;
+    }
+
+    if (list_length(current_deck) != DECK_SIZE) {
+        return 0;
+    }
+
+    current = current_deck;
+
+    for (row = 0; row < ROWS; row++) {
+        start_col = first_col_in_row(row);
+
+        for (col = start_col; col < COLS; col++) {
+            if (current == NULL) {
+                clear_tableau(&temp_game);
+                return 0;
+            }
+
+            card = current->card;
+            card.face_up = false;
+
+            CardNode *node = node_create(card);
+            if (node == NULL) {
+                clear_tableau(&temp_game);
+                return 0;
+            }
+
+            append(&temp_game.columns[col], node);
+            current = current->next;
+            index++;
+        }
+    }
+
+    clear_tableau(&current_game);
+    current_game = temp_game;
+
+    return index == DECK_SIZE;
+}
+
+
+
 // Regler for foundations
 static bool can_move_to_foundation(Card card, CardNode *foundation) {
     if (foundation == NULL) {
@@ -252,9 +321,145 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
     }
 
     pop_tail(source);
+
+    flip_new_bottom_card(source);
+
     append(foundation, node);
     return 1;
+}
+// flytter valgt kort til foundation hvis det er nederst
+static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected) {
+    CardNode *current;
 
+    if (*source == NULL) {
+        return 0;
+    }
+
+    current = *source;
+    while (current != NULL) {
+        if (current->card.rank == selected.rank && current->card.suit == selected.suit) {
+            break;
+        }
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        return 0;
+    }
+
+    if (current->next != NULL) {
+        return 0;
+    }
+
+    return move_card_to_foundation(source, foundation);
+}
+// flytter fra foundation til kolonne
+static int move_foundation_to_column(CardNode **foundation, CardNode **destination) {
+    if (*foundation == NULL) {
+        return 0;
+    }
+
+    Card card = peek_tail(*foundation);
+
+    if (!can_place_on_column(card, *destination)) {
+        return 0;
+    }
+
+    CardNode *node = node_create(card);
+    if (node == NULL) {
+        return 0;
+    }
+
+    pop_tail(foundation);
+    append(destination, node);
+
+    return 1;
+}
+// vender nyt bundkort hvis det var skjult
+static void flip_new_bottom_card(CardNode **column) {
+    CardNode *tail = tail_node(*column);
+
+    if (tail != NULL && !tail->card.face_up) {
+        tail->card.face_up = true;
+    }
+}
+
+// tjekker om et kort må ligge nederst i en kolonne
+static bool can_place_on_column(Card card, CardNode *destination) {
+    if (destination == NULL) {
+        return card.rank == RANK_KING;
+    }
+
+    Card bottom = peek_tail(destination);
+
+    return bottom.rank == card.rank + 1 && bottom.suit != card.suit;
+}
+
+// flytter nederste kort fra en kolonne til en anden
+static int move_bottom_card_to_column(CardNode **source, CardNode **destination) {
+    if (*source == NULL) {
+        return 0;
+    }
+
+    Card card = peek_tail(*source);
+
+    if (!card.face_up) {
+        return 0;
+    }
+
+    if (!can_place_on_column(card, *destination)) {
+        return 0;
+    }
+
+    CardNode *node = node_create(card);
+    if (node == NULL) {
+        return 0;
+    }
+
+    pop_tail(source);
+    flip_new_bottom_card(source);
+    append(destination, node);
+
+    return 1;
+}
+// flytter fra et bestemt kort og ned
+static int move_stack_to_column(CardNode **source, CardNode **destination, Card selected) {
+    CardNode *current;
+    CardNode *sublist;
+
+    if (*source == NULL) {
+        return 0;
+    }
+
+    current = *source;
+    while (current != NULL) {
+        if (current->card.rank == selected.rank && current->card.suit == selected.suit) {
+            break;
+        }
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        return 0;
+    }
+
+    if (!current->card.face_up) {
+        return 0;
+    }
+
+    if (!can_place_on_column(current->card, *destination)) {
+        return 0;
+    }
+
+    sublist = split_list(source, selected.rank, selected.suit);
+    if (sublist == NULL) {
+        return 0;
+    }
+
+    append_sublist(destination, sublist);
+    flip_new_bottom_card(source);
+
+    return 1;
 }
 
 // startup kommandoer
@@ -264,12 +469,15 @@ static int is_startup_command(const char *command) {
     if (strcmp(command, "SI") == 0) return 1;
     if (strcmp(command, "SR") == 0) return 1;
     if (strcmp(command, "SD") == 0) return 1;
-    if (strcmp(command, "QQ") == 0) return 1;
     return 0;
 }
 
-// håndterer input
+// tager imod input
 static int handle_command(const char *command, const char *arg) {
+    if (strcmp(command, "QQ") == 0) {
+        strcpy(message, "OK");
+        return 0;
+    }
     if (current_phase == PHASE_PLAY && is_startup_command(command)) {
         strcpy(message, "Command not available in the PLAY phase.");
         return 1;
@@ -296,16 +504,88 @@ static int handle_command(const char *command, const char *arg) {
         }
 
         deck_loaded = 1;
+        if (!show_loaded_deck_hidden()) {
+            strcpy(message, "Could not show deck.");
+            return 1;
+        }
         strcpy(message, "OK");
         return 1;
     }
 
     if (strcmp(command, "SW") == 0) {
-        if (!show_current_deck()) {
+        if (!deck_loaded || current_deck == NULL) {
             strcpy(message, "No deck loaded.");
             return 1;
         }
 
+        if (list_length(current_deck) != DECK_SIZE) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        show_deck_view = 1;
+        strcpy(message, "OK");
+        return 1;
+    }
+
+    if (strcmp(command, "SD") == 0) {
+        const char *filename = arg;
+
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        if (filename == NULL) {
+            filename = "cards.txt";
+        }
+
+        if (!save_deck(filename, current_deck)) {
+            strcpy(message, "Could not save deck.");
+            return 1;
+        }
+
+        strcpy(message, "OK");
+        return 1;
+    }
+
+    if (strcmp(command, "SI") == 0) {
+        int split;
+        int length;
+
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        length = list_length(current_deck);
+
+        if (arg == NULL) {
+            srand((unsigned int) time(NULL));
+            split = (rand() % (length - 1)) + 1;
+        } else {
+            if (sscanf(arg, "%d", &split) != 1) {
+                strcpy(message, "Invalid split.");
+                return 1;
+            }
+        }
+
+        if (!shuffle_interleave_split(&current_deck, split)) {
+            strcpy(message, "Invalid split.");
+            return 1;
+        }
+
+        strcpy(message, "OK");
+        return 1;
+    }
+
+    if (strcmp(command, "SR") == 0) {
+        if (!deck_loaded || current_deck == NULL) {
+            strcpy(message, "No deck loaded.");
+            return 1;
+        }
+
+        shuffle_random(&current_deck);
         strcpy(message, "OK");
         return 1;
     }
@@ -320,6 +600,8 @@ static int handle_command(const char *command, const char *arg) {
             strcpy(message, "No deck loaded.");
             return 1;
         }
+
+        clear_tableau(&current_game);
 
         if (!deal_from_current_deck(&current_game)) {
             strcpy(message, "Error while dealing cards");
@@ -343,10 +625,6 @@ static int handle_command(const char *command, const char *arg) {
         return 1;
     }
 
-    if (strcmp(command, "QQ") == 0) {
-        strcpy(message, "OK");
-        return 0;
-    }
 
     if (strstr(command, "->") != NULL) {
         if (current_phase != PHASE_PLAY) {
@@ -360,22 +638,88 @@ static int handle_command(const char *command, const char *arg) {
             return 1;
         }
 
-        if (from.kind != LOC_COL_TAIL || to.kind != LOC_FOUNDATION) {
-            strcpy(message, "Not implemented yet.");
+        if (from.kind == LOC_COL_TAIL && to.kind == LOC_FOUNDATION) {
+            if (!move_card_to_foundation(&current_game.columns[from.index],
+                                         &current_game.foundations[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            set_move_message();
             return 1;
         }
 
-        if (!move_card_to_foundation(&current_game.columns[from.index],
-                                     &current_game.foundations[to.index])) {
-            strcpy(message, "Illegal move.");
+        if (from.kind == LOC_COL_CARD && to.kind == LOC_FOUNDATION) {
+            if (!move_selected_card_to_foundation(&current_game.columns[from.index],
+                                                  &current_game.foundations[to.index],
+                                                  from.card)) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            set_move_message();
             return 1;
         }
 
-        strcpy(message, "OK");
+        if (from.kind == LOC_FOUNDATION && to.kind == LOC_COL_TAIL) {
+            if (!move_foundation_to_column(&current_game.foundations[from.index],
+                                           &current_game.columns[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            set_move_message();
+            return 1;
+        }
+
+        if (from.kind == LOC_COL_TAIL && to.kind == LOC_COL_TAIL) {
+            if (!move_bottom_card_to_column(&current_game.columns[from.index],
+                                            &current_game.columns[to.index])) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            set_move_message();
+            return 1;
+        }
+        if (from.kind == LOC_COL_CARD && to.kind == LOC_COL_TAIL) {
+            if (!move_stack_to_column(&current_game.columns[from.index],
+                                      &current_game.columns[to.index],
+                                      from.card)) {
+                strcpy(message, "Illegal move.");
+                return 1;
+            }
+
+            set_move_message();
+            return 1;
+        }
+
+        strcpy(message, "Not implemented yet.");
         return 1;
     }
 
     strcpy(message, "Command not available yet.");
 
     return 1;
+}
+
+// tjekker om spillet er vundet
+static int is_game_won(void) {
+    int total = 0;
+    int i;
+
+    for (i = 0; i < FOUNDATIONS; i++) {
+        total += list_length(current_game.foundations[i]);
+    }
+
+    return total == DECK_SIZE;
+}
+
+// besked efter et legal move
+static void set_move_message(void) {
+    if (is_game_won()) {
+        strcpy(message, "You won.");
+    } else {
+        strcpy(message, "OK");
+    }
 }

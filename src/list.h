@@ -19,5 +19,6 @@ Card find_node(CardNode *head, Rank rank, Suit suit);
 CardNode *split_list(CardNode **head, Rank rank, Suit suit);
 void append_sublist(CardNode **head, CardNode *sublist);
 void free_list(CardNode **head);
+CardNode *tail_node(CardNode *head);
 
 #endif
