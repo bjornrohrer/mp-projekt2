@@ -216,6 +216,7 @@ void free_list(CardNode **head) {
     *head = NULL;
 }
 
+// Returns the tail of linked list
 CardNode *tail_node(CardNode *head) {
     if (head == NULL) {
         return NULL;

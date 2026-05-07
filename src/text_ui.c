@@ -43,6 +43,7 @@ static void print_foundation(int index, CardNode *foundation) {
     printf(" F%d", index + 1);
 }
 
+// Prints the gamestate
 void print_gamestate(const Gamestate *gs) {
     if (gs == NULL) {
         return;
@@ -83,6 +84,7 @@ void print_gamestate(const Gamestate *gs) {
     }
 }
 
+// Prints the deck to the screen
 void print_deck(CardNode *deck) {
     CardNode *current = deck;
     while (current != NULL) {
@@ -93,6 +95,7 @@ void print_deck(CardNode *deck) {
     }
 }
 
+// Prints a message to the screen
 void print_message(const char *message) {
     if (message == NULL) {
         return;

@@ -3,6 +3,7 @@
 #include "input.h"
 #include "card.h"
 
+// Parser en lokation: C1-C7, C1:AS, eller F1-F4
 int parse_location(const char *s, Location *out) {
     if (s == NULL || out == NULL) {
         return 0;
@@ -55,6 +56,7 @@ int parse_location(const char *s, Location *out) {
     return 0;
 }
 
+// parser det move der er blevet valgt
 int parse_move(const char *input, Location *from, Location *to) {
     if (input == NULL || from == NULL || to == NULL) {
         return 0;
