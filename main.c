@@ -3,7 +3,7 @@
 //
 
 int game_logic_run(void);
-
+// Start the program
 int main(void) {
     return game_logic_run();
 }

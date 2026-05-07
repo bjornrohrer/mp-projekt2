@@ -3,6 +3,7 @@
 
 #include "card.h"
 
+// Turns the rank of a card to a char
 char rank_to_char(Rank rank) {
     switch (rank) {
         case RANK_ACE:   return 'A';
@@ -22,6 +23,7 @@ char rank_to_char(Rank rank) {
     }
 }
 
+// Turns the suit of a card to a char
 char suit_to_char(Suit suit) {
     switch (suit) {
         case SUIT_CLUBS:   return 'C';
@@ -32,6 +34,7 @@ char suit_to_char(Suit suit) {
     }
 }
 
+// Gets the card from a string and turns it into the right card
 bool card_from_string(const char *s, Card *out) {
     if (s == NULL || out == NULL) {
         return false;
