@@ -28,7 +28,7 @@ static CardNode *current_deck = NULL;
 static int deck_loaded = 0;
 static int show_deck_view = 0;
 static char last_command[40] = "";
-static char message[100] = "";
+static char message[160] = "";
 
 static int first_col_in_row(int row);
 static void clear_tableau(Gamestate *game);
@@ -81,7 +81,7 @@ int game_logic_run(void) {
             continue;
         }
 
-        strcpy(last_command, input);
+        snprintf(last_command, sizeof(last_command), "%s", input);
 
         if (parts == 1) {
             running = handle_command(command, NULL);
@@ -101,16 +101,22 @@ static int first_col_in_row(int row) {
     if (row == 0) {
         return 0;
     }
-    if (row <= 2) {
+    if (row <= 5) {
         return 1;
     }
-    if (row <= 5) {
+    if (row == 6) {
         return 2;
     }
-    if (row <= 8) {
+    if (row == 7) {
         return 3;
     }
-    return 4;
+    if (row == 8) {
+        return 4;
+    }
+    if (row == 9) {
+        return 5;
+    }
+    return 6;
 }
 
 // rydder kolonnerne
@@ -193,7 +199,6 @@ static int show_current_deck(void) {
     Card card;
     int row;
     int col;
-    int start_col;
     int index = 0;
 
     if (!deck_loaded || current_deck == NULL) {
@@ -206,15 +211,8 @@ static int show_current_deck(void) {
 
     current = current_deck;
 
-    for (row = 0; row < ROWS; row++) {
-        start_col = first_col_in_row(row);
-
-        for (col = start_col; col < COLS; col++) {
-            if (current == NULL) {
-                clear_tableau(&temp_game);
-                return 0;
-            }
-
+    for (row = 0; row < ROWS && current != NULL; row++) {
+        for (col = 0; col < COLS && current != NULL; col++) {
             card = current->card;
             card.face_up = true;
 
@@ -243,7 +241,6 @@ static int show_loaded_deck_hidden(void) {
     Card card;
     int row;
     int col;
-    int start_col;
     int index = 0;
 
     if (!deck_loaded || current_deck == NULL) {
@@ -256,15 +253,8 @@ static int show_loaded_deck_hidden(void) {
 
     current = current_deck;
 
-    for (row = 0; row < ROWS; row++) {
-        start_col = first_col_in_row(row);
-
-        for (col = start_col; col < COLS; col++) {
-            if (current == NULL) {
-                clear_tableau(&temp_game);
-                return 0;
-            }
-
+    for (row = 0; row < ROWS && current != NULL; row++) {
+        for (col = 0; col < COLS && current != NULL; col++) {
             card = current->card;
             card.face_up = false;
 
@@ -491,13 +481,13 @@ static int handle_command(const char *command, const char *arg) {
 
         if (arg == NULL) {
             if (!generate_unshuffled_deck(&current_deck)) {
-                strcpy(message, "Could not load deck.");
+                snprintf(message, sizeof(message), "Could not load deck.");
                 deck_loaded = 0;
                 return 1;
             }
         } else {
             if (!load_deck(arg, &current_deck)) {
-                strcpy(message, "Could not load deck.");
+                snprintf(message, sizeof(message), "Could not load deck.");
                 deck_loaded = 0;
                 return 1;
             }
@@ -541,7 +531,7 @@ static int handle_command(const char *command, const char *arg) {
         }
 
         if (!save_deck(filename, current_deck)) {
-            strcpy(message, "Could not save deck.");
+            snprintf(message, sizeof(message), "Could not save deck.");
             return 1;
         }
 
