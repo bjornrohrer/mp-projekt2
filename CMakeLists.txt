@@ -16,12 +16,13 @@ add_executable(mp_projekt2
         src/text_ui.c
         src/card.c)
 
-add_executable(gui_backend
-        src/gui_backend.c
+add_executable(game_logic_backend
+        src/game_logic.c
         src/card.h
         src/list.c
         src/deck.c
         src/input.c
-        src/game_engine.c
-        src/game_engine.h
+        src/text_ui.c
         src/card.c)
+
+target_compile_definitions(game_logic_backend PRIVATE GAME_LOGIC_BACKEND)

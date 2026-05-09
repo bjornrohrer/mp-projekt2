@@ -3,14 +3,29 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "card.h"
 #include "list.h"
 #include "deck.h"
 
+static char last_deck_error[160] = "";
+
+static void set_deck_error(const char *format, ...) {
+    va_list args;
+
+    va_start(args, format);
+    vsnprintf(last_deck_error, sizeof(last_deck_error), format, args);
+    va_end(args);
+}
+
+const char *deck_last_error(void) {
+    return last_deck_error;
+}
+
 /* Loader deck fra fil */
 int load_deck(const char *filename, CardNode **deck) {
-    FILE *file = fopen(filename, "r");
+    FILE *file;
     char line[100];
     Card card;
     CardNode *temp_deck = NULL;
@@ -18,17 +33,30 @@ int load_deck(const char *filename, CardNode **deck) {
     /* Holder styr på duplicates */
     int seen[4][13] = {0};
     int count = 0;
+    int line_number = 0;
 
+    last_deck_error[0] = '\0';
+
+    if (filename == NULL || filename[0] == '\0') {
+        set_deck_error("No filename provided.");
+        return 0;
+    }
+
+    file = fopen(filename, "r");
     if (file == NULL) {
+        set_deck_error("File does not exist: %s", filename);
         return 0;
     }
 
     /* Læser filen linje for linje */
     while (fgets(line, sizeof(line), file) != NULL) {
+        line_number++;
         line[strcspn(line, "\n")] = '\0';
+        line[strcspn(line, "\r")] = '\0';
 
         /* Laver tekst om til kort */
         if (!card_from_string(line, &card)) {
+            set_deck_error("Invalid card at line %d.", line_number);
             fclose(file);
             free_list(&temp_deck);
             return 0;
@@ -36,6 +64,7 @@ int load_deck(const char *filename, CardNode **deck) {
 
         /* Tjekker om kortet allerede findes */
         if (seen[card.suit][card.rank - 1]) {
+            set_deck_error("Duplicate card at line %d.", line_number);
             fclose(file);
             free_list(&temp_deck);
             return 0;
@@ -48,6 +77,7 @@ int load_deck(const char *filename, CardNode **deck) {
         CardNode *node = node_create(card);
 
         if (node == NULL) {
+            set_deck_error("Could not allocate card at line %d.", line_number);
             fclose(file);
             free_list(&temp_deck);
             return 0;
@@ -61,6 +91,7 @@ int load_deck(const char *filename, CardNode **deck) {
 
     /* Decket skal have præcis 52 kort */
     if (count != 52) {
+        set_deck_error("Expected 52 cards, found %d.", count);
         free_list(&temp_deck);
         return 0;
     }
@@ -77,12 +108,16 @@ int save_deck(const char *filename, CardNode *deck) {
     FILE *file;
     CardNode *current;
 
+    last_deck_error[0] = '\0';
+
     if (filename == NULL || deck == NULL) {
+        set_deck_error("No deck loaded.");
         return 0;
     }
 
     file = fopen(filename, "w");
     if (file == NULL) {
+        set_deck_error("Could not save deck to file.");
         return 0;
     }
 
@@ -101,6 +136,8 @@ int save_deck(const char *filename, CardNode *deck) {
 /* Laver et nyt standard deck */
 int generate_unshuffled_deck(CardNode **deck) {
     CardNode *temp_deck = NULL;
+
+    last_deck_error[0] = '\0';
 
     /* Clubs */
     for (Rank rank = RANK_ACE; rank <= RANK_KING; rank++) {
