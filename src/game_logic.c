@@ -60,23 +60,18 @@ static void backend_print_response(void);
 static int game_logic_backend_run(void);
 #endif
 
-// kører input loopet
 int game_logic_run(void) {
+    YukonGame game;
     char input[140];
-    char command[40];
-    char arg[100];
+    char last_command[140] = "";
     int running = 1;
-    int parts;
+
+    yukon_game_init(&game);
 
     while (running) {
-        if (show_deck_view) {
-            show_current_deck();
-            show_deck_view = 0;
-        } else {
-            print_gamestate(&current_game);
-        }
+        print_gamestate(yukon_game_display_state(&game));
         printf("\nLAST Command: %s\n", last_command);
-        printf("Message: %s\n", message);
+        printf("Message: %s\n", yukon_game_message(&game));
         printf("INPUT > ");
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
@@ -85,11 +80,8 @@ int game_logic_run(void) {
         }
 
         input[strcspn(input, "\n")] = '\0';
-
-        parts = sscanf(input, "%39s %99s", command, arg);
-        if (parts < 1) {
-            strcpy(message, "Command not available yet.");
-            continue;
+        if (input[0] != '\0') {
+            snprintf(last_command, sizeof(last_command), "%s", input);
         }
 
         snprintf(last_command, sizeof(last_command), "%s", input);
@@ -101,9 +93,7 @@ int game_logic_run(void) {
         }
     }
 
-    clear_tableau(&current_game);
-    clear_foundations(&current_game);
-    free_list(&current_deck);
+    yukon_game_destroy(&game);
     return 0;
 }
 
