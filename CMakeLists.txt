@@ -12,7 +12,6 @@ add_executable(mp_projekt2
         src/game_engine.c
         src/game_engine.h
         src/game_logic.c
-        src/main_text.c
         src/text_ui.c
         src/card.c)
 
