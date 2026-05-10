@@ -20,7 +20,7 @@ typedef enum {
     PHASE_PLAY
 } Phase;
 
-// game state
+// game state (starter i startup)
 static Phase current_phase = PHASE_STARTUP;
 // spillets kolonner og foundations
 static Gamestate current_game = {0};
@@ -61,18 +61,23 @@ static int game_logic_backend_run(void);
 #endif
 
 #ifndef GAME_LOGIC_BACKEND
+// kører input loopet
 int game_logic_run(void) {
-    YukonGame game;
     char input[140];
-    char last_command[140] = "";
+    char command[40];
+    char arg[100];
     int running = 1;
-
-    yukon_game_init(&game);
+    int parts;
 
     while (running) {
-        print_gamestate(yukon_game_display_state(&game));
+        if (show_deck_view) {
+            show_current_deck();
+            show_deck_view = 0;
+        } else {
+            print_gamestate(&current_game);
+        }
         printf("\nLAST Command: %s\n", last_command);
-        printf("Message: %s\n", yukon_game_message(&game));
+        printf("Message: %s\n", message);
         printf("INPUT > ");
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
@@ -81,8 +86,11 @@ int game_logic_run(void) {
         }
 
         input[strcspn(input, "\n")] = '\0';
-        if (input[0] != '\0') {
-            snprintf(last_command, sizeof(last_command), "%s", input);
+
+        parts = sscanf(input, "%39s %99s", command, arg);
+        if (parts < 1) {
+            strcpy(message, "Command not available yet.");
+            continue;
         }
 
         snprintf(last_command, sizeof(last_command), "%s", input);
@@ -94,7 +102,9 @@ int game_logic_run(void) {
         }
     }
 
-    yukon_game_destroy(&game);
+    clear_tableau(&current_game);
+    clear_foundations(&current_game);
+    free_list(&current_deck);
     return 0;
 }
 #endif
