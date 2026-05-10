@@ -330,7 +330,7 @@ static int move_card_to_foundation(CardNode **source, CardNode **foundation) {
     append(foundation, node);
     return 1;
 }
-// flytter valgt kort til foundation hvis det er nederst
+// Flytter valgt kort til foundation hvis det er nederst
 static int move_selected_card_to_foundation(CardNode **source, CardNode **foundation, Card selected) {
     CardNode *current;
 
@@ -356,7 +356,7 @@ static int move_selected_card_to_foundation(CardNode **source, CardNode **founda
 
     return move_card_to_foundation(source, foundation);
 }
-// flytter fra foundation til kolonne
+// Flytter fra foundation til kolonne
 static int move_foundation_to_column(CardNode **foundation, CardNode **destination) {
     if (*foundation == NULL) {
         return 0;
