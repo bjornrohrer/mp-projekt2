@@ -60,6 +60,7 @@ static void backend_print_response(void);
 static int game_logic_backend_run(void);
 #endif
 
+#ifndef GAME_LOGIC_BACKEND
 int game_logic_run(void) {
     YukonGame game;
     char input[140];
@@ -96,6 +97,7 @@ int game_logic_run(void) {
     yukon_game_destroy(&game);
     return 0;
 }
+#endif
 
 // finder startkolonnen for en række
 static int first_col_in_row(int row) {
